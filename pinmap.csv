@@ -1,3 +1,4 @@
 PIN,FUNCTION,NOTES
 PG7,LPUART1,printf
 PG8,LPUART1,printf
+PB7,TIM4_CH2, pitch servo
