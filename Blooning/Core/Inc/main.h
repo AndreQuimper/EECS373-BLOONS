@@ -59,6 +59,12 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define Stepper_Dir_Pin GPIO_PIN_12
+#define Stepper_Dir_GPIO_Port GPIOF
+#define Stepper_Step_Pin GPIO_PIN_13
+#define Stepper_Step_GPIO_Port GPIOF
+#define servo_pwm_Pin GPIO_PIN_7
+#define servo_pwm_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
