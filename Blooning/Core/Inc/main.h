@@ -46,7 +46,12 @@ extern "C" {
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-
+#define TIM4_ADDR 0x40000800//timer 4 base register
+#define TIM_CCR2_OFFSET 0x38//capture/compare register 2
+#define CCR_MASK 0xFFFF
+#define SERVO_MIN 50
+#define SERVO_MAX 260
+#define SERVO_MID (SERVO_MIN + SERVO_MAX)/2
 /* USER CODE END EM */
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
@@ -65,9 +70,16 @@ void Error_Handler(void);
 #define Stepper_Step_GPIO_Port GPIOF
 #define servo_pwm_Pin GPIO_PIN_7
 #define servo_pwm_GPIO_Port GPIOB
-
+#define STEP_RIGHT GPIO_PIN_SET
+#define STEP_LEFT GPIO_PIN_RESET
 /* USER CODE BEGIN Private defines */
+void set_tim4_ccr2(uint16_t val);
 
+// arg should be from 0 to 90
+void set_pitch(int degrees_from_level);
+
+// use the STEP_LEFT or STEP_RIGHT macros
+void motor_take_step(int dir);
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
