@@ -1,4 +1,6 @@
 PIN,FUNCTION,NOTES
 PG7,LPUART1,printf
 PG8,LPUART1,printf
+PG9,USART1,rpi comm
+PG10,USART1,rpi comm
 PB7,TIM4_CH2, pitch servo
