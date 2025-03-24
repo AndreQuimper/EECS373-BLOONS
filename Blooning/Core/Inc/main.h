@@ -70,8 +70,8 @@ void Error_Handler(void);
 #define Stepper_Step_GPIO_Port GPIOF
 #define servo_pwm_Pin GPIO_PIN_7
 #define servo_pwm_GPIO_Port GPIOB
-#define STEP_RIGHT GPIO_PIN_SET
-#define STEP_LEFT GPIO_PIN_RESET
+#define STEP_CCW GPIO_PIN_SET
+#define STEP_CW GPIO_PIN_RESET
 /* USER CODE BEGIN Private defines */
 void set_tim4_ccr2(uint16_t val);
 

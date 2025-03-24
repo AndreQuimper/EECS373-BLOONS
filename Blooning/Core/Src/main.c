@@ -71,11 +71,27 @@ void set_pitch(int degrees_from_level){
 	set_tim4_ccr2(degrees_from_level*(SERVO_MAX-SERVO_MIN)/90 + SERVO_MIN);
 }
 
-//use the STEP_LEFT or STEP_RIGHT macros
+//use the STEP_CW or STEP_CCW macros
 void motor_take_step(int dir){
 	HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,dir); //set the direction of the step
 	HAL_GPIO_WritePin(Stepper_Step_GPIO_Port,Stepper_Step_Pin,GPIO_PIN_SET);
 	HAL_GPIO_WritePin(Stepper_Step_GPIO_Port,Stepper_Step_Pin,GPIO_PIN_RESET);
+}
+/*
+TODO: write a higher level function that sets up a timer.
+This is so that we don't have to drive every step.
+*/
+
+//if the stepper motor seems shaky just put some weight on it
+void spin_motor_test(void){
+	for(int i = 0; i < 5000; i++){
+		motor_take_step(STEP_CW);
+		HAL_Delay(2);
+	}
+		  for(int i = 0; i < 15000; i++){
+		motor_take_step(STEP_CCW);
+		HAL_Delay(2);
+	}
 }
 /* USER CODE END 0 */
 
@@ -117,15 +133,10 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
-
+  //initialize the servo with to be level with ground
+  set_pitch(0);
   while (1)
   {
-	  for(int i = 0; i < 50; i++){
-		motor_take_step(STEP_LEFT);
-	  }
-	  for(int i = 0; i < 150; i++){
-	  	motor_take_step(STEP_RIGHT);
-	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
