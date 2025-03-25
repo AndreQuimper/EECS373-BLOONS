@@ -64,14 +64,25 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define PS2_CS_Pin GPIO_PIN_4
+#define PS2_CS_GPIO_Port GPIOA
+#define PS2_SCK_Pin GPIO_PIN_5
+#define PS2_SCK_GPIO_Port GPIOA
+#define PS2_MISO_Pin GPIO_PIN_6
+#define PS2_MISO_GPIO_Port GPIOA
+#define PS2_MOSI_Pin GPIO_PIN_7
+#define PS2_MOSI_GPIO_Port GPIOA
 #define Stepper_Dir_Pin GPIO_PIN_12
 #define Stepper_Dir_GPIO_Port GPIOF
 #define Stepper_Step_Pin GPIO_PIN_13
 #define Stepper_Step_GPIO_Port GPIOF
 #define servo_pwm_Pin GPIO_PIN_7
 #define servo_pwm_GPIO_Port GPIOB
-#define STEP_CCW GPIO_PIN_SET
-#define STEP_CW GPIO_PIN_RESET
+#define DPAD_UP_MASK (1<<4)
+#define DPAD_RIGHT_MASK (1<<5)
+#define DPAD_DOWN_MASK (1<<6)
+#define DPAD_LEFT_MASK (1<<7)
+#define BUTTON_X_MASK (1<<6)
 /* USER CODE BEGIN Private defines */
 void set_tim4_ccr2(uint16_t val);
 
@@ -80,6 +91,8 @@ void set_pitch(int degrees_from_level);
 
 // use the STEP_LEFT or STEP_RIGHT macros
 void motor_take_step(int dir);
+
+void ps2_transaction(void);
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
