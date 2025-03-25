@@ -78,11 +78,7 @@ void Error_Handler(void);
 #define Stepper_Step_GPIO_Port GPIOF
 #define servo_pwm_Pin GPIO_PIN_7
 #define servo_pwm_GPIO_Port GPIOB
-#define DPAD_UP_MASK (1<<4)
-#define DPAD_RIGHT_MASK (1<<5)
-#define DPAD_DOWN_MASK (1<<6)
-#define DPAD_LEFT_MASK (1<<7)
-#define BUTTON_X_MASK (1<<6)
+
 /* USER CODE BEGIN Private defines */
 void set_tim4_ccr2(uint16_t val);
 
