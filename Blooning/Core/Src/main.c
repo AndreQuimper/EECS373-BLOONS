@@ -45,7 +45,8 @@ UART_HandleTypeDef huart1;
 SPI_HandleTypeDef hspi1;
 
 TIM_HandleTypeDef htim4;
-
+size_t coord_cnt;
+uint8_t coord_list[20];
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -82,22 +83,35 @@ void motor_take_step(int dir){
 	HAL_GPIO_WritePin(Stepper_Step_GPIO_Port,Stepper_Step_Pin,GPIO_PIN_SET);
 	HAL_GPIO_WritePin(Stepper_Step_GPIO_Port,Stepper_Step_Pin,GPIO_PIN_RESET);
 }
+
+void read_coords(){
+	char *tx_buf = "request\n";
+	HAL_UART_Transmit(&huart1, tx_buf, 8, 1000);
+	uint8_t cnt_rx_buf[1];
+	HAL_UART_Receive(&huart1, cnt_rx_buf, 1, 1000);
+	coord_cnt = cnt_rx_buf[0];
+	if(coord_cnt > 20)
+		coord_cnt = 20;
+	HAL_UART_Receive(&huart1, coord_list, coord_cnt*2, 500);
+	HAL_Delay(1000);
+
+}
 /*
 TODO: write a higher level function that sets up a timer.
 This is so that we don't have to drive every step.
 */
 
 //if the stepper motor seems shaky just put some weight on it
-void spin_motor_test(void){
-	for(int i = 0; i < 5000; i++){
-		motor_take_step(STEP_CW);
-		HAL_Delay(2);
-	}
-		  for(int i = 0; i < 15000; i++){
-		motor_take_step(STEP_CCW);
-		HAL_Delay(2);
-	}
-}
+//void spin_motor_test(void){
+//	for(int i = 0; i < 5000; i++){
+//		motor_take_step(STEP_CW);
+//		HAL_Delay(2);
+//	}
+//		  for(int i = 0; i < 15000; i++){
+//		motor_take_step(STEP_CCW);
+//		HAL_Delay(2);
+//	}
+//}
 
 //TODO: test this thing with the ps2 controller
 //ps2 transaction from class presentation
@@ -115,11 +129,11 @@ void ps2_transaction(void){
    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET); // CS HIGH
 
    // get state of d-pad and X button
-   int dpad_status = PSX_RX[3];
-   int dpad_up = dpad_status & DPAD_UP_MASK;
-   int dpad_down = dpad_status & DPAD_DOWN_MASK;
-   int dpad_left = dpad_status & DPAD_LEFT_MASK;
-   int dpad_right = dpad_status & DPAD_RIGHT_MASK;
+//   int dpad_status = PSX_RX[3];
+//   int dpad_up = dpad_status & DPAD_UP_MASK;
+//   int dpad_down = dpad_status & DPAD_DOWN_MASK;
+//   int dpad_left = dpad_status & DPAD_LEFT_MASK;
+//   int dpad_right = dpad_status & DPAD_RIGHT_MASK;
    //not that they will not be 1 or 0, they will be 0 or positive int
    //TODO: do something with this data
 
@@ -170,6 +184,8 @@ int main(void)
   set_pitch(0);
   while (1)
   {
+	  read_coords();
+	  HAL_Delay(500);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
