@@ -40,6 +40,9 @@
 
 /* Private variables ---------------------------------------------------------*/
 UART_HandleTypeDef hlpuart1;
+UART_HandleTypeDef huart1;
+
+SPI_HandleTypeDef hspi1;
 
 TIM_HandleTypeDef htim4;
 
@@ -52,15 +55,16 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_LPUART1_UART_Init(void);
 static void MX_TIM4_Init(void);
+static void MX_SPI1_Init(void);
+static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-#define TIM4_ADDR 0x40000800//timer 4 base register
-#define TIM_CCR2_OFFSET 0x38//capture/compare register 2
-#define CCR_MASK 0xFFFF
+
+//This is a helper function, if you want to mess with the servo, use the set_pitch function
 void set_tim4_ccr2(uint16_t val){
 	uint32_t * tim4_ccr2 = (uint32_t *)(TIM4_ADDR + TIM_CCR2_OFFSET);
 	*tim4_ccr2 &= ~CCR_MASK;
@@ -71,9 +75,55 @@ void set_tim4_ccr2(uint16_t val){
 void set_pitch(int degrees_from_level){
 	set_tim4_ccr2(degrees_from_level*(SERVO_MAX-SERVO_MIN)/90 + SERVO_MIN);
 }
-#define SERVO_MIN 50
-#define SERVO_MAX 260
-#define SERVO_MID (SERVO_MIN + SERVO_MAX)/2
+
+//use the STEP_CW or STEP_CCW macros
+void motor_take_step(int dir){
+	HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,dir); //set the direction of the step
+	HAL_GPIO_WritePin(Stepper_Step_GPIO_Port,Stepper_Step_Pin,GPIO_PIN_SET);
+	HAL_GPIO_WritePin(Stepper_Step_GPIO_Port,Stepper_Step_Pin,GPIO_PIN_RESET);
+}
+/*
+TODO: write a higher level function that sets up a timer.
+This is so that we don't have to drive every step.
+*/
+
+//if the stepper motor seems shaky just put some weight on it
+void spin_motor_test(void){
+	for(int i = 0; i < 5000; i++){
+		motor_take_step(STEP_CW);
+		HAL_Delay(2);
+	}
+		  for(int i = 0; i < 15000; i++){
+		motor_take_step(STEP_CCW);
+		HAL_Delay(2);
+	}
+}
+
+//TODO: test this thing with the ps2 controller
+//ps2 transaction from class presentation
+//for reference see https://docs.google.com/presentation/d/12RinNV7N_wY5BfJECBLrAtkQDGO9stQqThNh4kqjwPg/edit#slide=id.g3420c6d2660_0_211
+void ps2_transaction(void){
+	static uint8_t PSX_RX[21];
+	static uint8_t PSX_TX[21] = {
+	     0x01, 0x42, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	     0x00, 0x00, 0x00, 0x00, 0x00
+	 };
+   // Get state of all buttons and store it in PSX_RX (Transmission length 21)
+   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); // CS LOW
+   HAL_SPI_TransmitReceive(&hspi1, PSX_TX, PSX_RX, 21, 10);
+   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET); // CS HIGH
+
+   // get state of d-pad and X button
+   int dpad_status = PSX_RX[3];
+   int dpad_up = dpad_status & DPAD_UP_MASK;
+   int dpad_down = dpad_status & DPAD_DOWN_MASK;
+   int dpad_left = dpad_status & DPAD_LEFT_MASK;
+   int dpad_right = dpad_status & DPAD_RIGHT_MASK;
+   //not that they will not be 1 or 0, they will be 0 or positive int
+   //TODO: do something with this data
+
+}
 /* USER CODE END 0 */
 
 /**
@@ -107,6 +157,8 @@ int main(void)
   MX_GPIO_Init();
   MX_LPUART1_UART_Init();
   MX_TIM4_Init();
+  MX_SPI1_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -114,10 +166,10 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
-
+  //initialize the servo with to be level with ground
+  set_pitch(0);
   while (1)
   {
-
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -218,6 +270,94 @@ static void MX_LPUART1_UART_Init(void)
 }
 
 /**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 9600;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart1.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+  huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_SetTxFifoThreshold(&huart1, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_SetRxFifoThreshold(&huart1, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_DisableFifoMode(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
+
+}
+
+/**
+  * @brief SPI1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SPI1_Init(void)
+{
+
+  /* USER CODE BEGIN SPI1_Init 0 */
+
+  /* USER CODE END SPI1_Init 0 */
+
+  /* USER CODE BEGIN SPI1_Init 1 */
+
+  /* USER CODE END SPI1_Init 1 */
+  /* SPI1 parameter configuration*/
+  hspi1.Instance = SPI1;
+  hspi1.Init.Mode = SPI_MODE_MASTER;
+  hspi1.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi1.Init.DataSize = SPI_DATASIZE_4BIT;
+  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi1.Init.NSS = SPI_NSS_SOFT;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi1.Init.CRCPolynomial = 7;
+  hspi1.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
+  hspi1.Init.NSSPMode = SPI_NSS_PULSE_ENABLE;
+  if (HAL_SPI_Init(&hspi1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN SPI1_Init 2 */
+
+  /* USER CODE END SPI1_Init 2 */
+
+}
+
+/**
   * @brief TIM4 Initialization Function
   * @param None
   * @retval None
@@ -284,8 +424,8 @@ static void MX_TIM4_Init(void)
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
-/* USER CODE BEGIN MX_GPIO_Init_1 */
-/* USER CODE END MX_GPIO_Init_1 */
+  /* USER CODE BEGIN MX_GPIO_Init_1 */
+  /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOE_CLK_ENABLE();
@@ -297,6 +437,12 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
   HAL_PWREx_EnableVddIO2();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(PS2_CS_GPIO_Port, PS2_CS_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOF, Stepper_Dir_Pin|Stepper_Step_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PE2 PE3 */
   GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3;
@@ -344,13 +490,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA4 PA5 PA6 PA7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  /*Configure GPIO pin : PS2_CS_Pin */
+  GPIO_InitStruct.Pin = PS2_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(PS2_CS_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PB0 */
   GPIO_InitStruct.Pin = GPIO_PIN_0;
@@ -371,6 +516,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : Stepper_Dir_Pin Stepper_Step_Pin */
+  GPIO_InitStruct.Pin = Stepper_Dir_Pin|Stepper_Step_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PE7 PE8 PE9 PE10
                            PE11 PE12 PE13 */
@@ -502,8 +654,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-/* USER CODE BEGIN MX_GPIO_Init_2 */
-/* USER CODE END MX_GPIO_Init_2 */
+  /* USER CODE BEGIN MX_GPIO_Init_2 */
+  /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
