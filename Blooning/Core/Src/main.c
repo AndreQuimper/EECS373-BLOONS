@@ -45,10 +45,10 @@ UART_HandleTypeDef huart1;
 SPI_HandleTypeDef hspi1;
 
 TIM_HandleTypeDef htim4;
-size_t coord_cnt;
-uint8_t coord_list[20];
-/* USER CODE BEGIN PV */
 
+/* USER CODE BEGIN PV */
+int coord_cnt;
+uint8_t coord_list[255];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -102,16 +102,16 @@ This is so that we don't have to drive every step.
 */
 
 //if the stepper motor seems shaky just put some weight on it
-//void spin_motor_test(void){
-//	for(int i = 0; i < 5000; i++){
-//		motor_take_step(STEP_CW);
-//		HAL_Delay(2);
-//	}
-//		  for(int i = 0; i < 15000; i++){
-//		motor_take_step(STEP_CCW);
-//		HAL_Delay(2);
-//	}
-//}
+void spin_motor_test(void){
+	for(int i = 0; i < 5000; i++){
+		motor_take_step(STEP_CW);
+		HAL_Delay(2);
+	}
+		  for(int i = 0; i < 15000; i++){
+		motor_take_step(STEP_CCW);
+		HAL_Delay(2);
+	}
+}
 
 //TODO: test this thing with the ps2 controller
 //ps2 transaction from class presentation
@@ -129,14 +129,31 @@ void ps2_transaction(void){
    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET); // CS HIGH
 
    // get state of d-pad and X button
-//   int dpad_status = PSX_RX[3];
-//   int dpad_up = dpad_status & DPAD_UP_MASK;
-//   int dpad_down = dpad_status & DPAD_DOWN_MASK;
-//   int dpad_left = dpad_status & DPAD_LEFT_MASK;
-//   int dpad_right = dpad_status & DPAD_RIGHT_MASK;
-   //not that they will not be 1 or 0, they will be 0 or positive int
-   //TODO: do something with this data
+   int dpad_status = ~PSX_RX[3];
+   int dpad_up = dpad_status & DPAD_UP_MASK;
+   int dpad_down = dpad_status & DPAD_DOWN_MASK;
+   int dpad_left = dpad_status & DPAD_LEFT_MASK;
+   int dpad_right = dpad_status & DPAD_RIGHT_MASK;
 
+   int button_status = ~PSX_RX[4];
+   int button_x = button_status & BUTTON_X_MASK;
+   //note that they will not be 1 or 0, they will be 0 or positive int
+   //TODO: do something with this data
+   if(dpad_up){
+	   printf("UP IS PRESSED \r\n");
+   }
+   if(dpad_down){
+   	   printf("DOWN IS PRESSED \r\n");
+   }
+   if(dpad_left){
+   	   printf("LEFT IS PRESSED \r\n");
+   }
+   if(dpad_right){
+   	   printf("RIGHT IS PRESSED \r\n");
+   }
+   if(button_x){
+   	   printf("X IS PRESSED \r\n");
+   }
 }
 /* USER CODE END 0 */
 
@@ -184,7 +201,7 @@ int main(void)
   set_pitch(0);
   while (1)
   {
-	  read_coords();
+	  ps2_transaction();
 	  HAL_Delay(500);
     /* USER CODE END WHILE */
 
@@ -352,17 +369,17 @@ static void MX_SPI1_Init(void)
   hspi1.Instance = SPI1;
   hspi1.Init.Mode = SPI_MODE_MASTER;
   hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi1.Init.DataSize = SPI_DATASIZE_4BIT;
-  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
+  hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
-  hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
+  hspi1.Init.FirstBit = SPI_FIRSTBIT_LSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
   hspi1.Init.CRCPolynomial = 7;
   hspi1.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
-  hspi1.Init.NSSPMode = SPI_NSS_PULSE_ENABLE;
+  hspi1.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
   if (HAL_SPI_Init(&hspi1) != HAL_OK)
   {
     Error_Handler();

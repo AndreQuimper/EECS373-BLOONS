@@ -52,6 +52,14 @@ extern "C" {
 #define SERVO_MIN 50
 #define SERVO_MAX 260
 #define SERVO_MID (SERVO_MIN + SERVO_MAX)/2
+//TODO: verify that CW and CCW directions are correct
+#define STEP_CW 1
+#define STEP_CCW 0
+#define DPAD_UP_MASK (1<<4)
+#define DPAD_RIGHT_MASK (1<<5)
+#define DPAD_DOWN_MASK (1<<6)
+#define DPAD_LEFT_MASK (1<<7)
+#define BUTTON_X_MASK (1<<6)
 /* USER CODE END EM */
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
