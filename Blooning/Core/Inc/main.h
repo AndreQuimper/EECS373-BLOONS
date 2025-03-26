@@ -60,6 +60,8 @@ extern "C" {
 #define DPAD_DOWN_MASK (1<<6)
 #define DPAD_LEFT_MASK (1<<7)
 #define BUTTON_X_MASK (1<<6)
+#define EXTI_PR_OFFSET 0x14
+#define EXTI_ADDR 0x40010400
 /* USER CODE END EM */
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);

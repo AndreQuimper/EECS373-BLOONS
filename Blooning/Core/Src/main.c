@@ -49,6 +49,7 @@ TIM_HandleTypeDef htim4;
 /* USER CODE BEGIN PV */
 int coord_cnt;
 uint8_t coord_list[255];
+int manual_mode = 0; //0 = automatic, 1 = manual
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -155,6 +156,20 @@ void ps2_transaction(void){
    	   printf("X IS PRESSED \r\n");
    }
 }
+
+//INTERRUPT HANDLER
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+	if(GPIO_Pin == GPIO_PIN_13){
+		//USER BUTTON WAS PRESSED
+		int speed = 5000; //button is debouncing :)
+		for(int i = 0; i < speed; i++){
+			continue; //can't use HAL_DELAY since SYS_Tick interrupt priority is low
+		}
+		manual_mode = 1 - manual_mode; //toggle mode
+		uint32_t *p = EXTI_ADDR + EXTI_PR_OFFSET;
+		*p |= (1<<13); //clear interrupt pending
+	}
+}
 /* USER CODE END 0 */
 
 /**
@@ -201,8 +216,8 @@ int main(void)
   set_pitch(0);
   while (1)
   {
-	  ps2_transaction();
-	  HAL_Delay(500);
+	  //ps2_transaction();
+	  //HAL_Delay(500);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -485,6 +500,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF13_SAI1;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : PC13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
   /*Configure GPIO pins : PF0 PF1 PF2 */
   GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
@@ -686,6 +707,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
   /* USER CODE END MX_GPIO_Init_2 */
