@@ -173,6 +173,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 
 void LCD_SendCommand4(uint8_t command) {
  HAL_GPIO_WritePin(RS_GPIO_Port, RS_Pin, GPIO_PIN_RESET);
+ HAL_Delay(2);
  HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, command & 1);
  HAL_GPIO_WritePin(D5_GPIO_Port, D5_Pin, (command >> 1) & 1);
  HAL_GPIO_WritePin(D6_GPIO_Port, D6_Pin, (command >> 2) & 1);
@@ -183,14 +184,16 @@ void LCD_SendCommand4(uint8_t command) {
  HAL_Delay(10);
 }
 void LCD_Init(void) {
- HAL_Delay(60);
- LCD_SendCommand4(0b0011);
- LCD_SendCommand(0x2C);
+ HAL_Delay(500);
+ LCD_SendCommand4(0x3);
+ LCD_SendCommand4(0x3);
+ LCD_SendCommand4(0x3);
+ LCD_SendCommand4(0x2);
  LCD_SendCommand(0x2C);
  LCD_SendCommand(0x0F);
  LCD_SendCommand(0x01);
  LCD_SendCommand(0x06);
- //LCD_SendCommand(0xC0);
+ LCD_SendCommand(0x0C);
 }
 void LCD_SendCommand(uint8_t command) {
  HAL_GPIO_WritePin(RS_GPIO_Port, RS_Pin, GPIO_PIN_RESET);
@@ -210,7 +213,7 @@ void LCD_SendCommand(uint8_t command) {
  HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_SET);
  HAL_Delay(2);
  HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_RESET);
- HAL_Delay(10);
+ HAL_Delay(30);
 }
 void LCD_SendData(uint8_t data) {
  HAL_GPIO_WritePin(RS_GPIO_Port, RS_Pin, GPIO_PIN_SET);
@@ -235,6 +238,14 @@ void LCD_SendData(uint8_t data) {
 void LCD_Clear(void) {
 LCD_SendCommand(0x01);
 HAL_Delay(2);
+}
+
+void LCD_WriteLines(char* line1, char* line2){
+	LCD_Clear();
+	//LCD_SendCommand(0b10000000);
+	LCD_WriteString(line1);
+	LCD_SendCommand(0b11000000);
+	LCD_WriteString(line2);
 }
 void LCD_WriteString(char* str) {
 	while(*str) {
@@ -292,7 +303,7 @@ int main(void)
 	  //ps2_transaction();
 	  //HAL_Delay(500);
 	  LCD_Clear();
-	  LCD_WriteString("HelloWorldMyName");
+	  LCD_WriteLines("HelloWorldMyName","IsHarisTroll");
 	  HAL_Delay(5000);
 
     /* USER CODE END WHILE */
