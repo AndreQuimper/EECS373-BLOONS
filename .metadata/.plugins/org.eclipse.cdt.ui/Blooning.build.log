@@ -1,0 +1,10 @@
+01:18:34 **** Incremental Build of configuration Debug for project Blooning ****
+make -j12 all 
+arm-none-eabi-size  Blooning.elf 
+   text	   data	    bss	    dec	    hex	filename
+  36704	    476	   2380	  39560	   9a88	Blooning.elf
+Finished building: default.size.stdout
+ 
+
+01:18:50 Build Finished. 0 errors, 0 warnings. (took 15s.336ms)
+

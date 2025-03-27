@@ -62,6 +62,20 @@ extern "C" {
 #define BUTTON_X_MASK (1<<6)
 #define EXTI_PR_OFFSET 0x14
 #define EXTI_ADDR 0x40010400
+
+
+#define RS_Pin GPIO_PIN_13
+#define RS_GPIO_Port GPIOE
+#define EN_Pin GPIO_PIN_15
+#define EN_GPIO_Port GPIOE
+#define D4_Pin GPIO_PIN_14
+#define D4_GPIO_Port GPIOE
+#define D5_Pin GPIO_PIN_12
+#define D5_GPIO_Port GPIOE
+#define D6_Pin GPIO_PIN_10
+#define D6_GPIO_Port GPIOE
+#define D7_Pin GPIO_PIN_7
+#define D7_GPIO_Port GPIOE
 /* USER CODE END EM */
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
@@ -99,6 +113,11 @@ void set_pitch(int degrees_from_level);
 void motor_take_step(int dir);
 
 void ps2_transaction(void);
+
+void LCD_SendCommand(uint8_t command);
+void LCD_SendData(uint8_t data);
+void LCD_Clear(void);
+void LCD_WriteString(char* str);
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
