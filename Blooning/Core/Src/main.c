@@ -254,6 +254,55 @@ void LCD_WriteString(char* str) {
 	}
 }
 
+void manual_control(void){
+	static uint8_t PSX_RX[21];
+	static uint8_t PSX_TX[21] = {
+		 0x01, 0x42, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		 0x00, 0x00, 0x00, 0x00, 0x00
+	 };
+   // Get state of all buttons and store it in PSX_RX (Transmission length 21)
+   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); // CS LOW
+   HAL_SPI_TransmitReceive(&hspi1, PSX_TX, PSX_RX, 21, 10);
+   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET); // CS HIGH
+
+   // get state of d-pad and X button
+   int dpad_status = ~PSX_RX[3];
+   int dpad_up = dpad_status & DPAD_UP_MASK;
+   int dpad_down = dpad_status & DPAD_DOWN_MASK;
+   int dpad_left = dpad_status & DPAD_LEFT_MASK;
+   int dpad_right = dpad_status & DPAD_RIGHT_MASK;
+
+   int button_status = ~PSX_RX[4];
+   int button_x = button_status & BUTTON_X_MASK;
+
+   //note that they will not be 1 or 0, they will be 0 or positive int
+   static int current_pitch = 0;
+   if(dpad_up){
+	   if(current_pitch < 85){
+		   current_pitch+=5;
+	   }
+	   set_pitch(current_pitch);
+   }
+   if(dpad_down){
+	   if(current_pitch > 5){
+		   current_pitch-=5;
+	   }
+	   set_pitch(current_pitch);
+   }
+   if(dpad_left){
+	   for(int i = 0; i < 50; i++){
+		   motor_take_step(STEP_CCW);
+		   HAL_Delay(1);
+	   }
+   }
+   if(dpad_right){
+	   for(int i = 0; i < 50; i++){
+		   motor_take_step(STEP_CW);
+		   HAL_Delay(1);
+	   }
+   }
+}
 /* USER CODE END 0 */
 
 /**
@@ -302,9 +351,15 @@ int main(void)
   {
 	  //ps2_transaction();
 	  //HAL_Delay(500);
-	  LCD_Clear();
-	  LCD_WriteLines("HelloWorldMyName","IsHarisTroll");
-	  HAL_Delay(5000);
+	  //LCD_Clear();
+	  //LCD_WriteLines("HelloWorldMyName","IsHarisTroll");
+//	  for(int i = 0; i < 90; i++){
+//		  set_pitch(i);
+//		  HAL_Delay(100);
+//	  }
+//	  HAL_Delay(5000);
+	  manual_control();
+	  HAL_Delay(50);
 
     /* USER CODE END WHILE */
 
