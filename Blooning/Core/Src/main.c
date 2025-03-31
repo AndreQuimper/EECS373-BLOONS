@@ -44,11 +44,16 @@ UART_HandleTypeDef huart1;
 
 SPI_HandleTypeDef hspi1;
 
+TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
-size_t coord_cnt;
-uint8_t coord_list[20];
-/* USER CODE BEGIN PV */
 
+/* USER CODE BEGIN PV */
+int coord_cnt;
+uint8_t coord_list[255];
+int manual_mode = 0; //0 = automatic, 1 = manual
+int stepper_active = 0; //0 = stepper pwm is off, 1 = stepper pwm is on
+int current_pitch = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,6 +63,8 @@ static void MX_LPUART1_UART_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_TIM3_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -74,10 +81,11 @@ void set_tim4_ccr2(uint16_t val){
 
 // arg should be from 0 to 90
 void set_pitch(int degrees_from_level){
-	set_tim4_ccr2(degrees_from_level*(SERVO_MAX-SERVO_MIN)/90 + SERVO_MIN);
+	set_tim4_ccr2(degrees_from_level*(SERVO_MAX-SERVO_MIN)/180 + SERVO_MIN);
 }
 
 //use the STEP_CW or STEP_CCW macros
+//this function is deprecated as we no longer use gpio for the stepper, instead we use pwm
 void motor_take_step(int dir){
 	HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,dir); //set the direction of the step
 	HAL_GPIO_WritePin(Stepper_Step_GPIO_Port,Stepper_Step_Pin,GPIO_PIN_SET);
@@ -102,18 +110,18 @@ This is so that we don't have to drive every step.
 */
 
 //if the stepper motor seems shaky just put some weight on it
-//void spin_motor_test(void){
-//	for(int i = 0; i < 5000; i++){
-//		motor_take_step(STEP_CW);
-//		HAL_Delay(2);
-//	}
-//		  for(int i = 0; i < 15000; i++){
-//		motor_take_step(STEP_CCW);
-//		HAL_Delay(2);
-//	}
-//}
+void spin_motor_test(void){
+	for(int i = 0; i < 5000; i++){
+		motor_take_step(STEP_CW);
+		HAL_Delay(2);
+	}
+		  for(int i = 0; i < 15000; i++){
+		motor_take_step(STEP_CCW);
+		HAL_Delay(2);
+	}
+}
 
-//TODO: test this thing with the ps2 controller
+
 //ps2 transaction from class presentation
 //for reference see https://docs.google.com/presentation/d/12RinNV7N_wY5BfJECBLrAtkQDGO9stQqThNh4kqjwPg/edit#slide=id.g3420c6d2660_0_211
 void ps2_transaction(void){
@@ -129,14 +137,243 @@ void ps2_transaction(void){
    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET); // CS HIGH
 
    // get state of d-pad and X button
-//   int dpad_status = PSX_RX[3];
-//   int dpad_up = dpad_status & DPAD_UP_MASK;
-//   int dpad_down = dpad_status & DPAD_DOWN_MASK;
-//   int dpad_left = dpad_status & DPAD_LEFT_MASK;
-//   int dpad_right = dpad_status & DPAD_RIGHT_MASK;
-   //not that they will not be 1 or 0, they will be 0 or positive int
-   //TODO: do something with this data
+   int dpad_status = ~PSX_RX[3];
+   int dpad_up = dpad_status & DPAD_UP_MASK;
+   int dpad_down = dpad_status & DPAD_DOWN_MASK;
+   int dpad_left = dpad_status & DPAD_LEFT_MASK;
+   int dpad_right = dpad_status & DPAD_RIGHT_MASK;
 
+   int button_status = ~PSX_RX[4];
+   int button_x = button_status & BUTTON_X_MASK;
+   //note that they will not be 1 or 0, they will be 0 or positive int
+   //TODO: do something with this data
+   if(dpad_up){
+	   printf("UP IS PRESSED \r\n");
+   }
+   if(dpad_down){
+   	   printf("DOWN IS PRESSED \r\n");
+   }
+   if(dpad_left){
+   	   printf("LEFT IS PRESSED \r\n");
+   }
+   if(dpad_right){
+   	   printf("RIGHT IS PRESSED \r\n");
+   }
+   if(button_x){
+   	   printf("X IS PRESSED \r\n");
+   }
+}
+
+//INTERRUPT HANDLER
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+	if(GPIO_Pin == GPIO_PIN_13){
+		//USER BUTTON WAS PRESSED
+		int speed = 5000; //button is debouncing :)
+		for(int i = 0; i < speed; i++){
+			continue; //can't use HAL_DELAY since SYS_Tick interrupt priority is low
+		}
+		manual_mode = 1 - manual_mode; //toggle mode
+		uint32_t *p = EXTI_ADDR + EXTI_PR_OFFSET;
+		*p |= (1<<13); //clear interrupt pending
+	}
+}
+
+void LCD_SendCommand4(uint8_t command) {
+ HAL_GPIO_WritePin(RS_GPIO_Port, RS_Pin, GPIO_PIN_RESET);
+ HAL_Delay(2);
+ HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, command & 1);
+ HAL_GPIO_WritePin(D5_GPIO_Port, D5_Pin, (command >> 1) & 1);
+ HAL_GPIO_WritePin(D6_GPIO_Port, D6_Pin, (command >> 2) & 1);
+ HAL_GPIO_WritePin(D7_GPIO_Port, D7_Pin, (command >> 3) & 1);
+ HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_SET);
+ HAL_Delay(2);
+ HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_RESET);
+ HAL_Delay(10);
+}
+void LCD_Init(void) {
+ HAL_Delay(500);
+ LCD_SendCommand4(0x3);
+ LCD_SendCommand4(0x3);
+ LCD_SendCommand4(0x3);
+ LCD_SendCommand4(0x2);
+ LCD_SendCommand(0x2C);
+ LCD_SendCommand(0x0F);
+ LCD_SendCommand(0x01);
+ LCD_SendCommand(0x06);
+ LCD_SendCommand(0x0C);
+}
+void LCD_SendCommand(uint8_t command) {
+ HAL_GPIO_WritePin(RS_GPIO_Port, RS_Pin, GPIO_PIN_RESET);
+ HAL_Delay(2);
+ HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, (command >> 4) & 1);
+ HAL_GPIO_WritePin(D5_GPIO_Port, D5_Pin, (command >> 5) & 1);
+ HAL_GPIO_WritePin(D6_GPIO_Port, D6_Pin, (command >> 6) & 1);
+ HAL_GPIO_WritePin(D7_GPIO_Port, D7_Pin, (command >> 7) & 1);
+ HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_SET);
+ HAL_Delay(2);
+ HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_RESET);
+ HAL_Delay(2);
+ HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, command & 1);
+ HAL_GPIO_WritePin(D5_GPIO_Port, D5_Pin, (command >> 1) & 1);
+ HAL_GPIO_WritePin(D6_GPIO_Port, D6_Pin, (command >> 2) & 1);
+ HAL_GPIO_WritePin(D7_GPIO_Port, D7_Pin, (command >> 3) & 1);
+ HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_SET);
+ HAL_Delay(2);
+ HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_RESET);
+ HAL_Delay(30);
+}
+void LCD_SendData(uint8_t data) {
+ HAL_GPIO_WritePin(RS_GPIO_Port, RS_Pin, GPIO_PIN_SET);
+ HAL_Delay(2);
+ HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, (data >> 4) & 1);
+ HAL_GPIO_WritePin(D5_GPIO_Port, D5_Pin, (data >> 5) & 1);
+ HAL_GPIO_WritePin(D6_GPIO_Port, D6_Pin, (data >> 6) & 1);
+ HAL_GPIO_WritePin(D7_GPIO_Port, D7_Pin, (data >> 7) & 1);
+ HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_SET);
+ HAL_Delay(2);
+ HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_RESET);
+ HAL_Delay(2);
+ HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, data & 1);
+ HAL_GPIO_WritePin(D5_GPIO_Port, D5_Pin, (data >> 1) & 1);
+ HAL_GPIO_WritePin(D6_GPIO_Port, D6_Pin, (data >> 2) & 1);
+ HAL_GPIO_WritePin(D7_GPIO_Port, D7_Pin, (data >> 3) & 1);
+ HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_SET);
+ HAL_Delay(2);
+ HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_RESET);
+ HAL_Delay(2);
+}
+void LCD_Clear(void) {
+LCD_SendCommand(0x01);
+HAL_Delay(2);
+}
+
+void LCD_WriteLines(char* line1, char* line2){
+	LCD_Clear();
+	//LCD_SendCommand(0b10000000);
+	LCD_WriteString(line1);
+	LCD_SendCommand(0b11000000);
+	LCD_WriteString(line2);
+}
+void LCD_WriteString(char* str) {
+	while(*str) {
+		LCD_SendData(*str++);
+		HAL_Delay(2);
+	}
+}
+
+//TODO: update this function to use pwm for stepper
+void manual_control(void){
+	static uint8_t PSX_RX[21];
+	static uint8_t PSX_TX[21] = {
+		 0x01, 0x42, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		 0x00, 0x00, 0x00, 0x00, 0x00
+	 };
+   // Get state of all buttons and store it in PSX_RX (Transmission length 21)
+   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); // CS LOW
+   HAL_SPI_TransmitReceive(&hspi1, PSX_TX, PSX_RX, 21, 10);
+   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET); // CS HIGH
+
+   // get state of d-pad and X button
+   int dpad_status = ~PSX_RX[3];
+   int dpad_up = dpad_status & DPAD_UP_MASK;
+   int dpad_down = dpad_status & DPAD_DOWN_MASK;
+   int dpad_left = dpad_status & DPAD_LEFT_MASK;
+   int dpad_right = dpad_status & DPAD_RIGHT_MASK;
+
+   int button_status = ~PSX_RX[4];
+   int button_x = button_status & BUTTON_X_MASK;
+
+   //note that they will not be 1 or 0, they will be 0 or positive int
+   if(dpad_up){
+	   if(current_pitch < 85){
+		   current_pitch+=5;
+	   }
+	   set_pitch(current_pitch);
+   }
+   if(dpad_down){
+	   if(current_pitch > 5){
+		   current_pitch-=5;
+	   }
+	   set_pitch(current_pitch);
+   }
+   if(dpad_left){
+	   for(int i = 0; i < 50; i++){
+		   motor_take_step(STEP_CCW);
+		   HAL_Delay(1);
+	   }
+   }
+   if(dpad_right){
+	   for(int i = 0; i < 50; i++){
+		   motor_take_step(STEP_CW);
+		   HAL_Delay(1);
+	   }
+   }
+
+   //TODO: shoot when button_x is asserted
+}
+
+// Function to start pwm of stepper motor for N steps
+// see TIM2_IRQHandler for interrupt handler related to this functionality
+void start_pwm_N_steps(uint32_t N){
+	//stop pwm
+	HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_2);
+	HAL_TIM_Base_Stop(&htim2);
+	__HAL_TIM_SetCounter(&htim2, 0);
+
+
+    // clear any pending interrupts
+    __HAL_TIM_DISABLE_IT(&htim2, TIM_IT_UPDATE);
+    __HAL_TIM_CLEAR_FLAG(&htim2, TIM_SR_UIF);
+
+	//configure tim2 to count N periods
+	htim2.Instance = TIM2;
+	htim2.Init.Prescaler = 0;
+	htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+	htim2.Init.Period = N - 1;  // Interrupt after N periods
+	htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+	if(HAL_TIM_Base_Init(&htim2) != HAL_OK){
+		Error_Handler(); //debug
+	}
+
+
+	// enable tim2 interrupt that will turn pwm off
+	HAL_NVIC_SetPriority(TIM2_IRQn, 0, 0);
+	__HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);
+	HAL_NVIC_EnableIRQ(TIM2_IRQn);
+
+	// start stepper pwm
+	stepper_active = 1;
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
+	HAL_TIM_Base_Start(&htim2);
+
+	//debug force update
+	//TIM2->EGR = TIM_EGR_UG;
+}
+
+// Use macro MOTOR_FULL_ROTATION_STEPS
+int calculate_rotation(int x, int* dir){
+	//TODO:
+	return 0;
+}
+
+//should be negative is appropriate
+int calculate_pitch_change(int y){
+	//TODO:
+	return 0;
+}
+
+//TODO: implement how to translate from coordinates to angle of rotation
+void aim_at_coords(int x, int y){
+	//calculate movement from coords
+	int dir;
+	int n_steps = calculate_rotation(x,&dir);
+	current_pitch += calculate_pitch_change(y);
+
+	//move
+	HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,dir); //set the direction of the step
+	start_pwm_N_steps(n_steps);
+	set_pitch(current_pitch);
 }
 /* USER CODE END 0 */
 
@@ -173,19 +410,24 @@ int main(void)
   MX_TIM4_Init();
   MX_SPI1_Init();
   MX_USART1_UART_Init();
+  MX_TIM3_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-
+  LCD_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2); //servo pwm
+  //HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2); //this is the stepper pwm
   //initialize the servo with to be level with ground
   set_pitch(0);
   while (1)
   {
-	  read_coords();
-	  HAL_Delay(500);
+	  //spin_motor_test();
+	  start_pwm_N_steps(200*16);
+	  HAL_Delay(5000);
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -352,17 +594,17 @@ static void MX_SPI1_Init(void)
   hspi1.Instance = SPI1;
   hspi1.Init.Mode = SPI_MODE_MASTER;
   hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi1.Init.DataSize = SPI_DATASIZE_4BIT;
-  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
+  hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
-  hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
+  hspi1.Init.FirstBit = SPI_FIRSTBIT_LSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
   hspi1.Init.CRCPolynomial = 7;
   hspi1.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
-  hspi1.Init.NSSPMode = SPI_NSS_PULSE_ENABLE;
+  hspi1.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
   if (HAL_SPI_Init(&hspi1) != HAL_OK)
   {
     Error_Handler();
@@ -370,6 +612,111 @@ static void MX_SPI1_Init(void)
   /* USER CODE BEGIN SPI1_Init 2 */
 
   /* USER CODE END SPI1_Init 2 */
+
+}
+
+/**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_SlaveConfigTypeDef sSlaveConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 0;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 4294967295;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_EXTERNAL1;
+  sSlaveConfig.InputTrigger = TIM_TS_ITR2;
+  if (HAL_TIM_SlaveConfigSynchro(&htim2, &sSlaveConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 0;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 1999;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 8;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+  HAL_TIM_MspPostInit(&htim3);
 
 }
 
@@ -460,6 +807,10 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOF, Stepper_Dir_Pin|Stepper_Step_Pin, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7|GPIO_PIN_10|GPIO_PIN_12|GPIO_PIN_13
+                          |GPIO_PIN_14|GPIO_PIN_15, GPIO_PIN_RESET);
+
   /*Configure GPIO pins : PE2 PE3 */
   GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
@@ -467,6 +818,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.Alternate = GPIO_AF13_SAI1;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PC13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PF0 PF1 PF2 */
   GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2;
@@ -492,14 +849,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA0 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
   /*Configure GPIO pins : PA1 PA3 */
   GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_3;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG_ADC_CONTROL;
@@ -512,14 +861,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(PS2_CS_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PB0 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PB1 */
   GPIO_InitStruct.Pin = GPIO_PIN_1;
@@ -540,31 +881,29 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PE7 PE8 PE9 PE10
-                           PE11 PE12 PE13 */
-  GPIO_InitStruct.Pin = GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10
-                          |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13;
+  /*Configure GPIO pins : PE7 PE10 PE12 PE13
+                           PE14 */
+  GPIO_InitStruct.Pin = GPIO_PIN_7|GPIO_PIN_10|GPIO_PIN_12|GPIO_PIN_13
+                          |GPIO_PIN_14;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PE8 PE9 PE11 */
+  GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_11;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.Alternate = GPIO_AF1_TIM1;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PE14 PE15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_14|GPIO_PIN_15;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  /*Configure GPIO pin : PE15 */
+  GPIO_InitStruct.Pin = GPIO_PIN_15;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.Alternate = GPIO_AF3_TIM1_COMP1;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PB10 */
-  GPIO_InitStruct.Pin = GPIO_PIN_10;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PB12 PB13 PB15 */
   GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_15;
@@ -596,14 +935,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.Alternate = GPIO_AF13_SAI2;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PC7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_7;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PC8 PC9 PC10 PC11
@@ -654,8 +985,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB3 PB4 PB5 */
-  GPIO_InitStruct.Pin = GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5;
+  /*Configure GPIO pins : PB3 PB4 */
+  GPIO_InitStruct.Pin = GPIO_PIN_3|GPIO_PIN_4;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
@@ -669,6 +1000,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
   /* USER CODE END MX_GPIO_Init_2 */
