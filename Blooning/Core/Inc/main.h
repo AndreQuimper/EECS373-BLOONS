@@ -63,6 +63,9 @@ extern "C" {
 #define EXTI_PR_OFFSET 0x14
 #define EXTI_ADDR 0x40010400
 
+#define MOTOR_STEP_SIZE 16 //16th steps
+#define MOTOR_FULL_ROTATION_STEPS 200*MOTOR_STEP_SIZE
+
 
 #define RS_Pin GPIO_PIN_13
 #define RS_GPIO_Port GPIOE
