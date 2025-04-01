@@ -49,6 +49,7 @@ TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim15;
+TIM_HandleTypeDef htim16;
 
 /* USER CODE BEGIN PV */
 int coord_cnt;
@@ -68,6 +69,7 @@ static void MX_USART1_UART_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM15_Init(void);
+static void MX_TIM16_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -87,14 +89,18 @@ void set_pitch(int degrees_from_level){
 	set_tim4_ccr2(degrees_from_level*(SERVO_MAX-SERVO_MIN)/180 + SERVO_MIN);
 }
 
-void set_tim15_ccr(uint16_t val){
-	TIM15->CCR1 = val;
-}
-
 // this function is to control the angle on the servo that controls the trigger
 //degrees should be 0 to 180
 void set_trigger_angle(int degrees){
-	set_tim15_ccr(degrees*(SERVO_MAX-SERVO_MIN)/180 + SERVO_MIN);
+	int val = degrees*(SERVO_MAX-SERVO_MIN)/180 + SERVO_MIN;
+	TIM15->CCR1 = val;
+}
+
+// this function is to control the angle on the servo that controls the cartridge
+//degrees should be 0 to 180
+void set_cartridge_angle(int degrees){
+	int val = degrees*(SERVO_MAX-SERVO_MIN)/180 + SERVO_MIN;
+	TIM16->CCR1 = val;
 }
 
 //use the STEP_CW or STEP_CCW macros
@@ -364,7 +370,20 @@ void start_pwm_N_steps(uint32_t N){
 // Use macro MOTOR_FULL_ROTATION_STEPS
 int calculate_rotation(int x, int* dir){
 	//TODO:
-	return 0;
+	if(x < CAMERA_MID){
+		*dir = STEP_CW;
+	}
+	else{
+		*dir = STEP_CCW;
+	}
+	int offset = abs(x-CAMERA_MID);
+	if(offset < ON_TARGET){
+		return offset;
+	}
+
+	float degrees_to_step = offset*CAMERA_FOV/(float)CAMERA_MID;
+	int num_steps = MOTOR_FULL_ROTATION_STEPS*degrees_to_step/360;
+	return num_steps/2;
 }
 
 //should be negative is appropriate
@@ -376,11 +395,12 @@ int calculate_pitch_change(int y){
 //TODO: implement how to translate from coordinates to angle of rotation
 void aim_at_coords(int x, int y){
 	//calculate movement from coords
-	if(stepper_active){
-		return;
-	}
+//	if(stepper_active){
+//		return;
+//	}
 	int dir;
 	int n_steps = calculate_rotation(x,&dir);
+	printf("nsteps = %d \n\r",n_steps);
 	current_pitch += calculate_pitch_change(y);
 
 	//move
@@ -426,6 +446,7 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM2_Init();
   MX_TIM15_Init();
+  MX_TIM16_Init();
   /* USER CODE BEGIN 2 */
   LCD_Init();
   /* USER CODE END 2 */
@@ -434,17 +455,32 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2); //servo pwm
   HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1); //trigger pwm
+  HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1); //cartridge pwm
   //initialize the servo with to be level with ground
   set_pitch(0);
+  set_trigger_angle(0);
+  set_cartridge_angle(0);
   while (1)
   {
-	  //start_pwm_N_steps(200*16);
-//	  read_coords();
-//	  for(int i = 0; i < 3*coord_cnt; i+=3){
-//		  printf("color = %c, x = %d, y = %d \n\r ",coord_list[i],coord_list[i+1],coord_list[i+2]);
-//	  }
-//	  memset(coord_list, 0, sizeof(coord_list));
+//	  HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,0); //set the direction of the step
+//	  start_pwm_N_steps(25*16);
 //	  HAL_Delay(1000);
+//	  HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,1); //set the direction of the step
+//	  start_pwm_N_steps(25*16);
+//	  HAL_Delay(1000);
+	  read_coords();
+	  printf("N coords received = %d \n\r", coord_cnt);
+	  for(int i = 0; i < 3*coord_cnt; i+=3){
+		  printf("color = %c, x = %d, y = %d \n\r ",coord_list[i],coord_list[i+1],coord_list[i+2]);
+		  if(coord_list[i] == 'G'){
+			  printf("aiming\n\r");
+			  aim_at_coords(coord_list[i+1],coord_list[i+2]);
+		  }
+	  }
+	  coord_cnt = 0;
+	  memset(coord_list, 0, sizeof(coord_list));
+	  HAL_Delay(1500);
+
 
 
     /* USER CODE END WHILE */
@@ -870,6 +906,68 @@ static void MX_TIM15_Init(void)
 
   /* USER CODE END TIM15_Init 2 */
   HAL_TIM_MspPostInit(&htim15);
+
+}
+
+/**
+  * @brief TIM16 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM16_Init(void)
+{
+
+  /* USER CODE BEGIN TIM16_Init 0 */
+
+  /* USER CODE END TIM16_Init 0 */
+
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
+
+  /* USER CODE BEGIN TIM16_Init 1 */
+
+  /* USER CODE END TIM16_Init 1 */
+  htim16.Instance = TIM16;
+  htim16.Init.Prescaler = 39;
+  htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim16.Init.Period = 1999;
+  htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim16.Init.RepetitionCounter = 0;
+  htim16.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim16) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim16) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_PWM_ConfigChannel(&htim16, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim16, &sBreakDeadTimeConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM16_Init 2 */
+
+  /* USER CODE END TIM16_Init 2 */
+  HAL_TIM_MspPostInit(&htim16);
 
 }
 

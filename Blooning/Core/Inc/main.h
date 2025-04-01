@@ -65,6 +65,10 @@ extern "C" {
 #define COLOR_ORANGE 'O'
 #define COLOR_GREEN 'G'
 #define COLOR_BLUE 'B'
+#define SERVO_PWM_PERIOD_US 20000
+#define ON_TARGET 12
+#define CAMERA_FOV 65
+#define CAMERA_MID 128
 
 #define MOTOR_STEP_SIZE 16 //16th steps
 #define MOTOR_FULL_ROTATION_STEPS 200*MOTOR_STEP_SIZE
