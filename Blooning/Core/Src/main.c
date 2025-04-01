@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
+#include "string.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,6 +48,7 @@ SPI_HandleTypeDef hspi1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
+TIM_HandleTypeDef htim15;
 
 /* USER CODE BEGIN PV */
 int coord_cnt;
@@ -65,6 +67,7 @@ static void MX_SPI1_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_TIM15_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -84,6 +87,16 @@ void set_pitch(int degrees_from_level){
 	set_tim4_ccr2(degrees_from_level*(SERVO_MAX-SERVO_MIN)/180 + SERVO_MIN);
 }
 
+void set_tim15_ccr(uint16_t val){
+	TIM15->CCR1 = val;
+}
+
+// this function is to control the angle on the servo that controls the trigger
+//degrees should be 0 to 180
+void set_trigger_angle(int degrees){
+	set_tim15_ccr(degrees*(SERVO_MAX-SERVO_MIN)/180 + SERVO_MIN);
+}
+
 //use the STEP_CW or STEP_CCW macros
 //this function is deprecated as we no longer use gpio for the stepper, instead we use pwm
 void motor_take_step(int dir){
@@ -95,19 +108,16 @@ void motor_take_step(int dir){
 void read_coords(){
 	char *tx_buf = "request\n";
 	HAL_UART_Transmit(&huart1, tx_buf, 8, 1000);
-	uint8_t cnt_rx_buf[1];
-	HAL_UART_Receive(&huart1, cnt_rx_buf, 1, 1000);
-	coord_cnt = cnt_rx_buf[0];
+	uint8_t cnt_rx;
+	HAL_UART_Receive(&huart1, &cnt_rx, 1, 1000);
+	coord_cnt = cnt_rx;
 	if(coord_cnt > 20)
 		coord_cnt = 20;
-	HAL_UART_Receive(&huart1, coord_list, coord_cnt*2, 500);
+	HAL_UART_Receive(&huart1, coord_list, coord_cnt*3, 500); // color, x, y
 	HAL_Delay(1000);
 
 }
-/*
-TODO: write a higher level function that sets up a timer.
-This is so that we don't have to drive every step.
-*/
+
 
 //if the stepper motor seems shaky just put some weight on it
 void spin_motor_test(void){
@@ -366,6 +376,9 @@ int calculate_pitch_change(int y){
 //TODO: implement how to translate from coordinates to angle of rotation
 void aim_at_coords(int x, int y){
 	//calculate movement from coords
+	if(stepper_active){
+		return;
+	}
 	int dir;
 	int n_steps = calculate_rotation(x,&dir);
 	current_pitch += calculate_pitch_change(y);
@@ -412,6 +425,7 @@ int main(void)
   MX_USART1_UART_Init();
   MX_TIM3_Init();
   MX_TIM2_Init();
+  MX_TIM15_Init();
   /* USER CODE BEGIN 2 */
   LCD_Init();
   /* USER CODE END 2 */
@@ -419,14 +433,19 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2); //servo pwm
-  //HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2); //this is the stepper pwm
+  HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1); //trigger pwm
   //initialize the servo with to be level with ground
   set_pitch(0);
   while (1)
   {
-	  //spin_motor_test();
-	  start_pwm_N_steps(200*16);
-	  HAL_Delay(5000);
+	  //start_pwm_N_steps(200*16);
+//	  read_coords();
+//	  for(int i = 0; i < 3*coord_cnt; i+=3){
+//		  printf("color = %c, x = %d, y = %d \n\r ",coord_list[i],coord_list[i+1],coord_list[i+2]);
+//	  }
+//	  memset(coord_list, 0, sizeof(coord_list));
+//	  HAL_Delay(1000);
+
 
     /* USER CODE END WHILE */
 
@@ -780,6 +799,81 @@ static void MX_TIM4_Init(void)
 }
 
 /**
+  * @brief TIM15 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM15_Init(void)
+{
+
+  /* USER CODE BEGIN TIM15_Init 0 */
+
+  /* USER CODE END TIM15_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
+
+  /* USER CODE BEGIN TIM15_Init 1 */
+
+  /* USER CODE END TIM15_Init 1 */
+  htim15.Instance = TIM15;
+  htim15.Init.Prescaler = 39;
+  htim15.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim15.Init.Period = 1999;
+  htim15.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim15.Init.RepetitionCounter = 0;
+  htim15.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim15) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim15, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim15) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim15, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_PWM_ConfigChannel(&htim15, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim15, &sBreakDeadTimeConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM15_Init 2 */
+
+  /* USER CODE END TIM15_Init 2 */
+  HAL_TIM_MspPostInit(&htim15);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -911,14 +1005,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.Alternate = GPIO_AF13_SAI2;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PB14 */
-  GPIO_InitStruct.Pin = GPIO_PIN_14;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.Alternate = GPIO_AF14_TIM15;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PD8 PD9 */

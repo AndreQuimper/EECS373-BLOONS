@@ -62,6 +62,9 @@ extern "C" {
 #define BUTTON_X_MASK (1<<6)
 #define EXTI_PR_OFFSET 0x14
 #define EXTI_ADDR 0x40010400
+#define COLOR_ORANGE 'O'
+#define COLOR_GREEN 'G'
+#define COLOR_BLUE 'B'
 
 #define MOTOR_STEP_SIZE 16 //16th steps
 #define MOTOR_FULL_ROTATION_STEPS 200*MOTOR_STEP_SIZE
