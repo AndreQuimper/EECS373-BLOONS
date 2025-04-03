@@ -113,6 +113,10 @@ void motor_take_step(int dir){
 
 void read_coords(){
 	char *tx_buf = "request\n";
+	while(stepper_active){
+		continue;
+	}
+	// after we are done moving give the RPI time to recompute
 	HAL_UART_Transmit(&huart1, tx_buf, 8, 1000);
 	uint8_t cnt_rx;
 	HAL_UART_Receive(&huart1, &cnt_rx, 1, 1000);
@@ -120,7 +124,6 @@ void read_coords(){
 	if(coord_cnt > 20)
 		coord_cnt = 20;
 	HAL_UART_Receive(&huart1, coord_list, coord_cnt*3, 500); // color, x, y
-	HAL_Delay(1000);
 
 }
 
@@ -346,7 +349,7 @@ void start_pwm_N_steps(uint32_t N){
 	htim2.Instance = TIM2;
 	htim2.Init.Prescaler = 0;
 	htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-	htim2.Init.Period = N - 1;  // Interrupt after N periods
+	htim2.Init.Period = N;  // Interrupt after N+1 periods
 	htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
 	if(HAL_TIM_Base_Init(&htim2) != HAL_OK){
 		Error_Handler(); //debug
@@ -403,10 +406,47 @@ void aim_at_coords(int x, int y){
 	printf("nsteps = %d \n\r",n_steps);
 	current_pitch += calculate_pitch_change(y);
 
-	//move
+	//
+
 	HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,dir); //set the direction of the step
-	start_pwm_N_steps(n_steps);
+	if(n_steps){
+		start_pwm_N_steps(n_steps);
+	}
 	set_pitch(current_pitch);
+}
+
+void automatic_mode_demo(){
+	read_coords();
+	printf("N coords received = %d \n\r", coord_cnt);
+	for(int i = 0; i < 3*coord_cnt; i+=3){
+		printf("color = %c, x = %d, y = %d \n\r ",coord_list[i],coord_list[i+1],coord_list[i+2]);
+		if(coord_list[i] == 'G'){
+			printf("aiming\n\r");
+			aim_at_coords(coord_list[i+1],coord_list[i+2]);
+			break;
+		}
+	}
+	coord_cnt = 0;
+	memset(coord_list, 0, sizeof(coord_list));
+	HAL_Delay(200);
+}
+
+void calculate_coords_test(void){
+	printf("Testing calculate_rotation(x,dir_addr) \n\r");
+	for(int i = 0; i < 256; i++){
+	  int dir;
+	  int n_steps = calculate_rotation(i,&dir);
+	  if(dir == STEP_CW){
+		  printf("x = %d, dir = STEP_CW, n_steps = %d \n\r",i,n_steps);
+	  }
+	  else if(dir == STEP_CCW){
+		  printf("x = %d, dir = STEP_CCW, n_steps = %d \n\r",i,n_steps);
+	  }
+	  else{
+		  printf("!!DIR EXPLODED!! x = %d, dir = %d, n_steps = %d \n\r",i,dir,n_steps);
+	  }
+	}
+	HAL_Delay(10000);
 }
 /* USER CODE END 0 */
 
@@ -462,25 +502,7 @@ int main(void)
   set_cartridge_angle(0);
   while (1)
   {
-//	  HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,0); //set the direction of the step
-//	  start_pwm_N_steps(25*16);
-//	  HAL_Delay(1000);
-//	  HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,1); //set the direction of the step
-//	  start_pwm_N_steps(25*16);
-//	  HAL_Delay(1000);
-	  read_coords();
-	  printf("N coords received = %d \n\r", coord_cnt);
-	  for(int i = 0; i < 3*coord_cnt; i+=3){
-		  printf("color = %c, x = %d, y = %d \n\r ",coord_list[i],coord_list[i+1],coord_list[i+2]);
-		  if(coord_list[i] == 'G'){
-			  printf("aiming\n\r");
-			  aim_at_coords(coord_list[i+1],coord_list[i+2]);
-		  }
-	  }
-	  coord_cnt = 0;
-	  memset(coord_list, 0, sizeof(coord_list));
-	  HAL_Delay(1500);
-
+	  automatic_mode_demo();
 
 
     /* USER CODE END WHILE */
@@ -738,7 +760,7 @@ static void MX_TIM3_Init(void)
   htim3.Instance = TIM3;
   htim3.Init.Prescaler = 0;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 1999;
+  htim3.Init.Period = 3999;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
