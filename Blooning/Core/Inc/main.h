@@ -129,6 +129,14 @@ void LCD_SendCommand(uint8_t command);
 void LCD_SendData(uint8_t data);
 void LCD_Clear(void);
 void LCD_WriteString(char* str);
+void LCD_Init(void);
+
+int calculate_rotation(int x, int* dir);
+int calculate_pitch_change(int y);
+void aim_at_coords(int x, int y);
+void start_pwm_N_steps(uint32_t N);
+
+extern SPI_HandleTypeDef hspi1;
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

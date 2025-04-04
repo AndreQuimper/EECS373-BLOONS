@@ -24,6 +24,7 @@
 #include "stdio.h"
 #include "string.h"
 #include "stepper_pwm.h"
+#include "stdlib.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -73,7 +74,7 @@ enum TurretMode {
 
 enum TurretMode current_mode = AUTO_RBG;
 
-int stepper_active = 0; //0 = stepper pwm is off, 1 = stepper pwm is on
+uint8_t stepper_active = 0; //0 = stepper pwm is off, 1 = stepper pwm is on
 int current_pitch = 0;
 /* USER CODE END PV */
 
@@ -122,7 +123,7 @@ void set_cartridge_angle(int degrees){
 }
 
 void read_coords(){
-	char *tx_buf = "request\n";
+	unsigned char *tx_buf = "request\n";
 	while(stepper_active){
 		continue;
 	}
@@ -203,6 +204,9 @@ void manual_control(void){
 // Function to start pwm of stepper motor for N steps
 // see TIM2_IRQHandler for interrupt handler related to this functionality
 void start_pwm_N_steps(uint32_t N){
+	if(N == 0){
+		return; //this would explode
+	}
 	//stop pwm
 	HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_2);
 	HAL_TIM_Base_Stop(&htim2);
@@ -296,6 +300,10 @@ void automatic_mode_demo(){
 				aim_at_coords(coord_list[i].x,coord_list[i].y);
 				goto done_aiming;
 			}
+		case MANUAL:
+		default:
+			printf("turret mode error\n\r");
+			return;
 		}
 
 	}
