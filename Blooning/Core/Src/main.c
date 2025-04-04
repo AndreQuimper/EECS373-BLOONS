@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
 #include "string.h"
+#include "stepper_pwm.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -52,9 +53,26 @@ TIM_HandleTypeDef htim15;
 TIM_HandleTypeDef htim16;
 
 /* USER CODE BEGIN PV */
+#pragma pack(1) //do not pad inside struct
+struct coord{
+	char color;
+	uint8_t x;
+	uint8_t y;
+};
+#pragma pack() //restore default packing
+
 int coord_cnt;
-uint8_t coord_list[255];
-int manual_mode = 0; //0 = automatic, 1 = manual
+
+struct coord coord_list[255];
+enum TurretMode {
+	AUTO_RBG, //slowest to fastest (IN GAME)
+	AUTO_GBR, // fastest to slowest (IN_GAME)
+	MANUAL // use ps2 controller
+};
+
+
+enum TurretMode current_mode = AUTO_RBG;
+
 int stepper_active = 0; //0 = stepper pwm is off, 1 = stepper pwm is on
 int current_pitch = 0;
 /* USER CODE END PV */
@@ -103,14 +121,6 @@ void set_cartridge_angle(int degrees){
 	TIM16->CCR1 = val;
 }
 
-//use the STEP_CW or STEP_CCW macros
-//this function is deprecated as we no longer use gpio for the stepper, instead we use pwm
-void motor_take_step(int dir){
-	HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,dir); //set the direction of the step
-	HAL_GPIO_WritePin(Stepper_Step_GPIO_Port,Stepper_Step_Pin,GPIO_PIN_SET);
-	HAL_GPIO_WritePin(Stepper_Step_GPIO_Port,Stepper_Step_Pin,GPIO_PIN_RESET);
-}
-
 void read_coords(){
 	char *tx_buf = "request\n";
 	while(stepper_active){
@@ -127,62 +137,6 @@ void read_coords(){
 
 }
 
-
-//if the stepper motor seems shaky just put some weight on it
-void spin_motor_test(void){
-	for(int i = 0; i < 5000; i++){
-		motor_take_step(STEP_CW);
-		HAL_Delay(2);
-	}
-		  for(int i = 0; i < 15000; i++){
-		motor_take_step(STEP_CCW);
-		HAL_Delay(2);
-	}
-}
-
-
-//ps2 transaction from class presentation
-//for reference see https://docs.google.com/presentation/d/12RinNV7N_wY5BfJECBLrAtkQDGO9stQqThNh4kqjwPg/edit#slide=id.g3420c6d2660_0_211
-void ps2_transaction(void){
-	static uint8_t PSX_RX[21];
-	static uint8_t PSX_TX[21] = {
-	     0x01, 0x42, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	     0x00, 0x00, 0x00, 0x00, 0x00
-	 };
-   // Get state of all buttons and store it in PSX_RX (Transmission length 21)
-   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); // CS LOW
-   HAL_SPI_TransmitReceive(&hspi1, PSX_TX, PSX_RX, 21, 10);
-   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET); // CS HIGH
-
-   // get state of d-pad and X button
-   int dpad_status = ~PSX_RX[3];
-   int dpad_up = dpad_status & DPAD_UP_MASK;
-   int dpad_down = dpad_status & DPAD_DOWN_MASK;
-   int dpad_left = dpad_status & DPAD_LEFT_MASK;
-   int dpad_right = dpad_status & DPAD_RIGHT_MASK;
-
-   int button_status = ~PSX_RX[4];
-   int button_x = button_status & BUTTON_X_MASK;
-   //note that they will not be 1 or 0, they will be 0 or positive int
-   //TODO: do something with this data
-   if(dpad_up){
-	   printf("UP IS PRESSED \r\n");
-   }
-   if(dpad_down){
-   	   printf("DOWN IS PRESSED \r\n");
-   }
-   if(dpad_left){
-   	   printf("LEFT IS PRESSED \r\n");
-   }
-   if(dpad_right){
-   	   printf("RIGHT IS PRESSED \r\n");
-   }
-   if(button_x){
-   	   printf("X IS PRESSED \r\n");
-   }
-}
-
 //INTERRUPT HANDLER
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if(GPIO_Pin == GPIO_PIN_13){
@@ -191,96 +145,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 		for(int i = 0; i < speed; i++){
 			continue; //can't use HAL_DELAY since SYS_Tick interrupt priority is low
 		}
-		manual_mode = 1 - manual_mode; //toggle mode
+		current_mode = (current_mode + 1) % 3; //cycle modes
 		uint32_t *p = EXTI_ADDR + EXTI_PR_OFFSET;
 		*p |= (1<<13); //clear interrupt pending
 	}
 }
 
-void LCD_SendCommand4(uint8_t command) {
- HAL_GPIO_WritePin(RS_GPIO_Port, RS_Pin, GPIO_PIN_RESET);
- HAL_Delay(2);
- HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, command & 1);
- HAL_GPIO_WritePin(D5_GPIO_Port, D5_Pin, (command >> 1) & 1);
- HAL_GPIO_WritePin(D6_GPIO_Port, D6_Pin, (command >> 2) & 1);
- HAL_GPIO_WritePin(D7_GPIO_Port, D7_Pin, (command >> 3) & 1);
- HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_SET);
- HAL_Delay(2);
- HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_RESET);
- HAL_Delay(10);
-}
-void LCD_Init(void) {
- HAL_Delay(500);
- LCD_SendCommand4(0x3);
- LCD_SendCommand4(0x3);
- LCD_SendCommand4(0x3);
- LCD_SendCommand4(0x2);
- LCD_SendCommand(0x2C);
- LCD_SendCommand(0x0F);
- LCD_SendCommand(0x01);
- LCD_SendCommand(0x06);
- LCD_SendCommand(0x0C);
-}
-void LCD_SendCommand(uint8_t command) {
- HAL_GPIO_WritePin(RS_GPIO_Port, RS_Pin, GPIO_PIN_RESET);
- HAL_Delay(2);
- HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, (command >> 4) & 1);
- HAL_GPIO_WritePin(D5_GPIO_Port, D5_Pin, (command >> 5) & 1);
- HAL_GPIO_WritePin(D6_GPIO_Port, D6_Pin, (command >> 6) & 1);
- HAL_GPIO_WritePin(D7_GPIO_Port, D7_Pin, (command >> 7) & 1);
- HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_SET);
- HAL_Delay(2);
- HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_RESET);
- HAL_Delay(2);
- HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, command & 1);
- HAL_GPIO_WritePin(D5_GPIO_Port, D5_Pin, (command >> 1) & 1);
- HAL_GPIO_WritePin(D6_GPIO_Port, D6_Pin, (command >> 2) & 1);
- HAL_GPIO_WritePin(D7_GPIO_Port, D7_Pin, (command >> 3) & 1);
- HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_SET);
- HAL_Delay(2);
- HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_RESET);
- HAL_Delay(30);
-}
-void LCD_SendData(uint8_t data) {
- HAL_GPIO_WritePin(RS_GPIO_Port, RS_Pin, GPIO_PIN_SET);
- HAL_Delay(2);
- HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, (data >> 4) & 1);
- HAL_GPIO_WritePin(D5_GPIO_Port, D5_Pin, (data >> 5) & 1);
- HAL_GPIO_WritePin(D6_GPIO_Port, D6_Pin, (data >> 6) & 1);
- HAL_GPIO_WritePin(D7_GPIO_Port, D7_Pin, (data >> 7) & 1);
- HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_SET);
- HAL_Delay(2);
- HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_RESET);
- HAL_Delay(2);
- HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, data & 1);
- HAL_GPIO_WritePin(D5_GPIO_Port, D5_Pin, (data >> 1) & 1);
- HAL_GPIO_WritePin(D6_GPIO_Port, D6_Pin, (data >> 2) & 1);
- HAL_GPIO_WritePin(D7_GPIO_Port, D7_Pin, (data >> 3) & 1);
- HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_SET);
- HAL_Delay(2);
- HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_RESET);
- HAL_Delay(2);
-}
-void LCD_Clear(void) {
-LCD_SendCommand(0x01);
-HAL_Delay(2);
-}
 
-void LCD_WriteLines(char* line1, char* line2){
-	LCD_Clear();
-	//LCD_SendCommand(0b10000000);
-	LCD_WriteString(line1);
-	LCD_SendCommand(0b11000000);
-	LCD_WriteString(line2);
-}
-void LCD_WriteString(char* str) {
-	while(*str) {
-		LCD_SendData(*str++);
-		HAL_Delay(2);
-	}
-}
 
-//TODO: update this function to use pwm for stepper
 void manual_control(void){
 	static uint8_t PSX_RX[21];
 	static uint8_t PSX_TX[21] = {
@@ -317,16 +189,12 @@ void manual_control(void){
 	   set_pitch(current_pitch);
    }
    if(dpad_left){
-	   for(int i = 0; i < 50; i++){
-		   motor_take_step(STEP_CCW);
-		   HAL_Delay(1);
-	   }
+	   HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,STEP_CCW); //set the direction of the step
+	   start_pwm_N_steps(DPAD_STEPS);
    }
    if(dpad_right){
-	   for(int i = 0; i < 50; i++){
-		   motor_take_step(STEP_CW);
-		   HAL_Delay(1);
-	   }
+	   HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,STEP_CW); //set the direction of the step
+	   start_pwm_N_steps(DPAD_STEPS);
    }
 
    //TODO: shoot when button_x is asserted
@@ -372,7 +240,6 @@ void start_pwm_N_steps(uint32_t N){
 
 // Use macro MOTOR_FULL_ROTATION_STEPS
 int calculate_rotation(int x, int* dir){
-	//TODO:
 	if(x < CAMERA_MID){
 		*dir = STEP_CW;
 	}
@@ -397,17 +264,13 @@ int calculate_pitch_change(int y){
 
 //TODO: implement how to translate from coordinates to angle of rotation
 void aim_at_coords(int x, int y){
-	//calculate movement from coords
-//	if(stepper_active){
-//		return;
-//	}
+	//calculate rotation
 	int dir;
 	int n_steps = calculate_rotation(x,&dir);
 	printf("nsteps = %d \n\r",n_steps);
 	current_pitch += calculate_pitch_change(y);
 
-	//
-
+	//aim
 	HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,dir); //set the direction of the step
 	if(n_steps){
 		start_pwm_N_steps(n_steps);
@@ -418,36 +281,30 @@ void aim_at_coords(int x, int y){
 void automatic_mode_demo(){
 	read_coords();
 	printf("N coords received = %d \n\r", coord_cnt);
-	for(int i = 0; i < 3*coord_cnt; i+=3){
-		printf("color = %c, x = %d, y = %d \n\r ",coord_list[i],coord_list[i+1],coord_list[i+2]);
-		if(coord_list[i] == 'G'){
-			printf("aiming\n\r");
-			aim_at_coords(coord_list[i+1],coord_list[i+2]);
-			break;
+	for(int i = 0; i < coord_cnt; i++){
+		printf("color = %c, x = %d, y = %d \n\r ",coord_list[i].color,coord_list[i].x,coord_list[i].y);
+		switch (current_mode){
+		case AUTO_GBR:
+			if(coord_list[i].color == 'G'){
+				printf("aiming\n\r");
+				aim_at_coords(coord_list[i].x,coord_list[i].y);
+				goto done_aiming;
+			}
+		case AUTO_RBG:
+			if(coord_list[i].color == 'B'){
+				printf("aiming\n\r");
+				aim_at_coords(coord_list[i].x,coord_list[i].y);
+				goto done_aiming;
+			}
 		}
+
 	}
+done_aiming:
 	coord_cnt = 0;
 	memset(coord_list, 0, sizeof(coord_list));
 	HAL_Delay(200);
 }
 
-void calculate_coords_test(void){
-	printf("Testing calculate_rotation(x,dir_addr) \n\r");
-	for(int i = 0; i < 256; i++){
-	  int dir;
-	  int n_steps = calculate_rotation(i,&dir);
-	  if(dir == STEP_CW){
-		  printf("x = %d, dir = STEP_CW, n_steps = %d \n\r",i,n_steps);
-	  }
-	  else if(dir == STEP_CCW){
-		  printf("x = %d, dir = STEP_CCW, n_steps = %d \n\r",i,n_steps);
-	  }
-	  else{
-		  printf("!!DIR EXPLODED!! x = %d, dir = %d, n_steps = %d \n\r",i,dir,n_steps);
-	  }
-	}
-	HAL_Delay(10000);
-}
 /* USER CODE END 0 */
 
 /**
@@ -502,9 +359,12 @@ int main(void)
   set_cartridge_angle(0);
   while (1)
   {
-	  automatic_mode_demo();
-
-
+	  if(current_mode == MANUAL){
+		  manual_control();
+	  }
+	  else{
+		  automatic_mode_demo();
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

@@ -61,7 +61,7 @@ extern "C" {
 #define DPAD_LEFT_MASK (1<<7)
 #define BUTTON_X_MASK (1<<6)
 #define EXTI_PR_OFFSET 0x14
-#define EXTI_ADDR 0x40010400
+#define EXTI_ADDR 0x40010400UL
 #define COLOR_ORANGE 'O'
 #define COLOR_GREEN 'G'
 #define COLOR_BLUE 'B'
@@ -73,6 +73,7 @@ extern "C" {
 #define MOTOR_STEP_SIZE 16 //16th steps
 #define MOTOR_FULL_ROTATION_STEPS 200*MOTOR_STEP_SIZE
 
+#define DPAD_STEPS 50
 
 #define RS_Pin GPIO_PIN_13
 #define RS_GPIO_Port GPIOE
