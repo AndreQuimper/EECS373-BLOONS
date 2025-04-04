@@ -99,8 +99,6 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define PS2_CS_Pin GPIO_PIN_4
-#define PS2_CS_GPIO_Port GPIOA
 #define PS2_SCK_Pin GPIO_PIN_5
 #define PS2_SCK_GPIO_Port GPIOA
 #define PS2_MISO_Pin GPIO_PIN_6
@@ -111,6 +109,8 @@ void Error_Handler(void);
 #define Stepper_Dir_GPIO_Port GPIOF
 #define Stepper_Step_Pin GPIO_PIN_13
 #define Stepper_Step_GPIO_Port GPIOF
+#define PS2_CS_Pin GPIO_PIN_14
+#define PS2_CS_GPIO_Port GPIOD
 #define servo_pwm_Pin GPIO_PIN_7
 #define servo_pwm_GPIO_Port GPIOB
 
