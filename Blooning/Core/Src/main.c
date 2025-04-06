@@ -147,7 +147,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 			continue; //can't use HAL_DELAY since SYS_Tick interrupt priority is low
 		}
 		current_mode = (current_mode + 1) % 3; //cycle modes
-		uint32_t *p = EXTI_ADDR + EXTI_PR_OFFSET;
+		uint32_t *p = EXTI_ADDR 	+ EXTI_PR_OFFSET;
 		*p |= (1<<13); //clear interrupt pending
 	}
 }
@@ -155,6 +155,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 
 
 void manual_control(void){
+	printf("MODE: MANUAL \n\r");
 	static uint8_t PSX_RX[21];
 	static uint8_t PSX_TX[21] = {
 		 0x01, 0x42, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -283,6 +284,12 @@ void aim_at_coords(int x, int y){
 }
 
 void automatic_mode_demo(){
+	if(current_mode == AUTO_GBR){
+		printf("MODE: AUTO_GBR\n\r");
+	}
+	if(current_mode == AUTO_RBG){
+		printf("MODE: AUTO_RBG\n\r");
+	}
 	read_coords();
 	printf("N coords received = %d \n\r", coord_cnt);
 	for(int i = 0; i < coord_cnt; i++){
@@ -294,13 +301,14 @@ void automatic_mode_demo(){
 				aim_at_coords(coord_list[i].x,coord_list[i].y);
 				goto done_aiming;
 			}
+			break;
 		case AUTO_RBG:
-			if(coord_list[i].color == 'B'){
+			if(coord_list[i].color == 'B'){ //TODO: make this red?
 				printf("aiming\n\r");
 				aim_at_coords(coord_list[i].x,coord_list[i].y);
 				goto done_aiming;
 			}
-		case MANUAL:
+			break;
 		default:
 			printf("turret mode error\n\r");
 			return;
