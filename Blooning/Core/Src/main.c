@@ -68,11 +68,15 @@ struct coord coord_list[255];
 enum TurretMode {
 	AUTO_RBG, //slowest to fastest (IN GAME)
 	AUTO_GBR, // fastest to slowest (IN_GAME)
-	MANUAL // use ps2 controller
+	MANUAL, // use ps2 controller
+	RELOAD
 };
+
+int cartridge_state = 0;
 
 
 enum TurretMode current_mode = AUTO_RBG;
+enum TurretMode mode_before_reload;
 
 uint8_t stepper_active = 0; //0 = stepper pwm is off, 1 = stepper pwm is on
 int current_pitch = 0;
@@ -146,7 +150,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 		for(int i = 0; i < speed; i++){
 			continue; //can't use HAL_DELAY since SYS_Tick interrupt priority is low
 		}
-		current_mode = (current_mode + 1) % 3; //cycle modes
+		if(current_mode = RELOAD){
+			current_mode = mode_before_reload;
+		}
+		else{
+			current_mode = (current_mode + 1) % 3; //cycle modes
+		}
 		uint32_t *p = EXTI_ADDR 	+ EXTI_PR_OFFSET;
 		*p |= (1<<13); //clear interrupt pending
 	}
@@ -321,6 +330,26 @@ done_aiming:
 	HAL_Delay(200);
 }
 
+void shoot(void){
+	//Shoot
+	set_trigger_angle(TRIGGER_SHOOT);
+	HAL_Delay(500);
+	set_trigger_angle(TRIGGER_REST);
+	HAL_Delay(400);
+
+	//Get next rubber band in position
+	cartridge_state++;
+	if(cartridge_state == MAX_RUBBER_BANDS){ //if out of bands, reload
+		mode_before_reload = current_mode;
+		current_mode = RELOAD;
+		set_cartridge_angle(CARTRIDGE_OFFSET);
+		cartridge_state = 0;
+		return;
+	}
+	set_cartridge_angle(CARTRIDGE_ANGLE*cartridge_state+CARTRIDGE_OFFSET);
+	return;
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -371,15 +400,19 @@ int main(void)
   HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1); //cartridge pwm
   //initialize the servo with to be level with ground
   set_pitch(0);
-  set_trigger_angle(0);
+  set_trigger_angle(TRIGGER_REST);
   set_cartridge_angle(0);
   while (1)
   {
-	  if(current_mode == MANUAL){
-		  manual_control();
-	  }
-	  else{
-		  automatic_mode_demo();
+//	  if(current_mode == MANUAL){
+//		  manual_control();
+//	  }
+//	  else{
+//		  automatic_mode_demo();
+//	  }
+	  if(current_mode != RELOAD){
+		  shoot();
+		  HAL_Delay(2000);
 	  }
     /* USER CODE END WHILE */
 

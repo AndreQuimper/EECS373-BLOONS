@@ -20,14 +20,12 @@ void motor_take_step(int dir){
 
 //if the stepper motor seems shaky just put some weight on it
 void spin_motor_test(void){
-	for(int i = 0; i < 5000; i++){
-		motor_take_step(STEP_CW);
-		HAL_Delay(2);
-	}
-		  for(int i = 0; i < 15000; i++){
-		motor_take_step(STEP_CCW);
-		HAL_Delay(2);
-	}
+	HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,STEP_CW); //set the direction of the step
+	start_pwm_N_steps(200);
+	HAL_Delay(500);
+	HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,STEP_CCW); //set the direction of the step
+	start_pwm_N_steps(200);
+	HAL_Delay(1500);
 }
 
 //ps2 transaction from class presentation

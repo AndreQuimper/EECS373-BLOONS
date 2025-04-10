@@ -87,6 +87,12 @@ extern "C" {
 #define D6_GPIO_Port GPIOE
 #define D7_Pin GPIO_PIN_7
 #define D7_GPIO_Port GPIOE
+
+#define TRIGGER_REST 30
+#define TRIGGER_SHOOT 120
+#define CARTRIDGE_ANGLE 25
+#define CARTRIDGE_OFFSET 5
+#define MAX_RUBBER_BANDS 7
 /* USER CODE END EM */
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
