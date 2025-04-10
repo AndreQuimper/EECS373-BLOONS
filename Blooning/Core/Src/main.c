@@ -146,11 +146,11 @@ void read_coords(){
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if(GPIO_Pin == GPIO_PIN_13){
 		//USER BUTTON WAS PRESSED
-		int speed = 5000; //button is debouncing :)
+		int speed = 50000; //button is debouncing :)
 		for(int i = 0; i < speed; i++){
 			continue; //can't use HAL_DELAY since SYS_Tick interrupt priority is low
 		}
-		if(current_mode = RELOAD){
+		if(current_mode == RELOAD){
 			current_mode = mode_before_reload;
 		}
 		else{
@@ -401,7 +401,7 @@ int main(void)
   //initialize the servo with to be level with ground
   set_pitch(0);
   set_trigger_angle(TRIGGER_REST);
-  set_cartridge_angle(0);
+  set_cartridge_angle(CARTRIDGE_OFFSET);
   while (1)
   {
 //	  if(current_mode == MANUAL){
@@ -410,6 +410,7 @@ int main(void)
 //	  else{
 //		  automatic_mode_demo();
 //	  }
+	  printf("%d\r\n",current_mode);
 	  if(current_mode != RELOAD){
 		  shoot();
 		  HAL_Delay(2000);
