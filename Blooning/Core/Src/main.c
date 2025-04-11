@@ -64,6 +64,8 @@ struct coord{
 
 int coord_cnt;
 
+int change_mode = 1; //Track if the mode is changed
+
 struct coord coord_list[255];
 enum TurretMode {
 	AUTO_RBG, //slowest to fastest (IN GAME)
@@ -155,6 +157,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 		}
 		else{
 			current_mode = (current_mode + 1) % 3; //cycle modes
+			change_mode = 1; //Mode was changed so LCD needs to be updated
 		}
 		uint32_t *p = EXTI_ADDR 	+ EXTI_PR_OFFSET;
 		*p |= (1<<13); //clear interrupt pending
@@ -164,6 +167,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 
 
 void manual_control(void){
+	if (change_mode){
+		int bands = MAX_RUBBER_BANDS - cartridge_state;
+		char l2[100];
+		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
+		LCD_WriteLines("Mode: MANUAL", l2);
+		change_mode = 0;
+	}
+
 	printf("MODE: MANUAL \n\r");
 	static uint8_t PSX_RX[21];
 	static uint8_t PSX_TX[21] = {
@@ -293,10 +304,22 @@ void aim_at_coords(int x, int y){
 }
 
 void automatic_mode_demo(){
-	if(current_mode == AUTO_GBR){
+	if(current_mode == AUTO_GBR && change_mode){
+		int bands = MAX_RUBBER_BANDS - cartridge_state;
+		char l2[100];
+		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
+		LCD_WriteLines("Mode: GBR", l2);
+		change_mode = 0;
+
 		printf("MODE: AUTO_GBR\n\r");
 	}
-	if(current_mode == AUTO_RBG){
+	if(current_mode == AUTO_RBG && change_mode){
+		int bands = MAX_RUBBER_BANDS - cartridge_state;
+		char l2[100];
+		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
+		LCD_WriteLines("Mode: RBG", l2);
+		change_mode = 0;
+
 		printf("MODE: AUTO_RBG\n\r");
 	}
 	read_coords();
@@ -343,9 +366,32 @@ void shoot(void){
 		mode_before_reload = current_mode;
 		current_mode = RELOAD;
 		set_cartridge_angle(CARTRIDGE_OFFSET);
+		int bands = MAX_RUBBER_BANDS - cartridge_state;
+		char l2[100];
+		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
+		LCD_WriteLines("Mode: RELOAD", l2);
 		cartridge_state = 0;
 		return;
 	}
+	if (current_mode == MANUAL){ //UPDATING RUBBERBAND COUNTS
+		int bands = MAX_RUBBER_BANDS - cartridge_state;
+		char l2[100];
+		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
+		LCD_WriteLines("Mode: MANUAL", l2);
+	}
+	if(current_mode == AUTO_GBR){
+		int bands = MAX_RUBBER_BANDS - cartridge_state;
+		char l2[100];
+		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
+		LCD_WriteLines("Mode: GBR", l2);
+	}
+	if(current_mode == AUTO_RBG){
+		int bands = MAX_RUBBER_BANDS - cartridge_state;
+		char l2[100];
+		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
+		LCD_WriteLines("Mode: RBG", l2);
+	}
+
 	set_cartridge_angle(CARTRIDGE_ANGLE*cartridge_state+CARTRIDGE_OFFSET);
 	return;
 }
@@ -404,13 +450,13 @@ int main(void)
   set_cartridge_angle(CARTRIDGE_OFFSET);
   while (1)
   {
-//	  if(current_mode == MANUAL){
-//		  manual_control();
-//	  }
-//	  else{
-//		  automatic_mode_demo();
-//	  }
-	  printf("%d\r\n",current_mode);
+	  if(current_mode == MANUAL){
+		  manual_control();
+	  }
+	  else{
+		  automatic_mode_demo();
+	  }
+	  //printf("%d\r\n",current_mode);
 	  if(current_mode != RELOAD){
 		  shoot();
 		  HAL_Delay(2000);
