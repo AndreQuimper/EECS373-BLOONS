@@ -10,6 +10,8 @@
 #include "string.h"
 #include "stepper_pwm.h"
 
+// NOTE: Anode Pin must be connected to Power rail, Sweeper of the Potentiometer has to be connected to Vo.
+
 void LCD_SendCommand4(uint8_t command) {
  HAL_GPIO_WritePin(RS_GPIO_Port, RS_Pin, GPIO_PIN_RESET);
  HAL_Delay(2);
