@@ -77,7 +77,7 @@ enum TurretMode {
 int cartridge_state = 0;
 
 
-enum TurretMode current_mode = AUTO_RBG;
+enum TurretMode current_mode = MANUAL;
 enum TurretMode mode_before_reload;
 
 uint8_t stepper_active = 0; //0 = stepper pwm is off, 1 = stepper pwm is on
@@ -167,12 +167,15 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 
 
 void manual_control(void){
-	if (change_mode){
+	//TODO: make this a function lcd stuff
+	static int displayed = 1;
+	if (displayed){
 		int bands = MAX_RUBBER_BANDS - cartridge_state;
 		char l2[100];
 		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
 		LCD_WriteLines("Mode: MANUAL", l2);
 		change_mode = 0;
+		displayed = 0;
 	}
 
 	printf("MODE: MANUAL \n\r");
@@ -199,14 +202,14 @@ void manual_control(void){
 
    //note that they will not be 1 or 0, they will be 0 or positive int
    if(dpad_up){
-	   if(current_pitch < 85){
-		   current_pitch+=5;
+	   if(current_pitch > 5){
+		   current_pitch=-1;
 	   }
 	   set_pitch(current_pitch);
    }
    if(dpad_down){
-	   if(current_pitch > 5){
-		   current_pitch-=5;
+	   if(current_pitch < 85){
+		   current_pitch+=1;
 	   }
 	   set_pitch(current_pitch);
    }
@@ -219,7 +222,10 @@ void manual_control(void){
 	   start_pwm_N_steps(DPAD_STEPS);
    }
 
-   //TODO: shoot when button_x is asserted
+   if(button_x){
+	   shoot();
+	   HAL_Delay(400);
+   }
 }
 
 // Function to start pwm of stepper motor for N steps
@@ -356,9 +362,9 @@ done_aiming:
 void shoot(void){
 	//Shoot
 	set_trigger_angle(TRIGGER_SHOOT);
-	HAL_Delay(500);
+	HAL_Delay(1100);
 	set_trigger_angle(TRIGGER_REST);
-	HAL_Delay(400);
+	HAL_Delay(1100);
 
 	//Get next rubber band in position
 	cartridge_state++;
@@ -373,6 +379,7 @@ void shoot(void){
 		cartridge_state = 0;
 		return;
 	}
+	//TODO make this a function
 	if (current_mode == MANUAL){ //UPDATING RUBBERBAND COUNTS
 		int bands = MAX_RUBBER_BANDS - cartridge_state;
 		char l2[100];
@@ -445,7 +452,7 @@ int main(void)
   HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1); //trigger pwm
   HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1); //cartridge pwm
   //initialize the servo with to be level with ground
-  set_pitch(0);
+  set_pitch(PITCH_REST/2);
   set_trigger_angle(TRIGGER_REST);
   set_cartridge_angle(CARTRIDGE_OFFSET);
   while (1)
@@ -454,12 +461,8 @@ int main(void)
 		  manual_control();
 	  }
 	  else{
+		  continue;
 		  automatic_mode_demo();
-	  }
-	  //printf("%d\r\n",current_mode);
-	  if(current_mode != RELOAD){
-		  shoot();
-		  HAL_Delay(2000);
 	  }
     /* USER CODE END WHILE */
 
