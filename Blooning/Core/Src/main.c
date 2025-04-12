@@ -81,7 +81,7 @@ enum TurretMode current_mode = MANUAL;
 enum TurretMode mode_before_reload;
 
 uint8_t stepper_active = 0; //0 = stepper pwm is off, 1 = stepper pwm is on
-int current_pitch = 0;
+int current_pitch = PITCH_REST/2;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -203,15 +203,19 @@ void manual_control(void){
    //note that they will not be 1 or 0, they will be 0 or positive int
    if(dpad_up){
 	   if(current_pitch > 5){
-		   current_pitch=-1;
+		   current_pitch-=1;
+		   set_pitch(current_pitch);
+		   HAL_Delay(10);
 	   }
-	   set_pitch(current_pitch);
+
    }
    if(dpad_down){
 	   if(current_pitch < 85){
 		   current_pitch+=1;
+		   set_pitch(current_pitch);
+		   HAL_Delay(10);
 	   }
-	   set_pitch(current_pitch);
+
    }
    if(dpad_left){
 	   HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,STEP_CCW); //set the direction of the step
@@ -226,6 +230,7 @@ void manual_control(void){
 	   shoot();
 	   HAL_Delay(400);
    }
+
 }
 
 // Function to start pwm of stepper motor for N steps
