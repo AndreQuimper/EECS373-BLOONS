@@ -61,14 +61,19 @@ extern "C" {
 #define DPAD_LEFT_MASK (1<<7)
 #define BUTTON_X_MASK (1<<6)
 #define EXTI_PR_OFFSET 0x14
-#define EXTI_ADDR 0x40010400
+#define EXTI_ADDR 0x40010400UL
 #define COLOR_ORANGE 'O'
 #define COLOR_GREEN 'G'
 #define COLOR_BLUE 'B'
+#define SERVO_PWM_PERIOD_US 20000
+#define ON_TARGET 12
+#define CAMERA_FOV 65
+#define CAMERA_MID 128
 
 #define MOTOR_STEP_SIZE 16 //16th steps
 #define MOTOR_FULL_ROTATION_STEPS 200*MOTOR_STEP_SIZE
 
+#define DPAD_STEPS 50
 
 #define RS_Pin GPIO_PIN_13
 #define RS_GPIO_Port GPIOE
@@ -82,6 +87,13 @@ extern "C" {
 #define D6_GPIO_Port GPIOE
 #define D7_Pin GPIO_PIN_7
 #define D7_GPIO_Port GPIOE
+
+#define TRIGGER_REST 50
+#define TRIGGER_SHOOT 165
+#define CARTRIDGE_ANGLE 25
+#define CARTRIDGE_OFFSET 10
+#define MAX_RUBBER_BANDS 7
+#define PITCH_REST 90
 /* USER CODE END EM */
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
@@ -94,8 +106,6 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define PS2_CS_Pin GPIO_PIN_4
-#define PS2_CS_GPIO_Port GPIOA
 #define PS2_SCK_Pin GPIO_PIN_5
 #define PS2_SCK_GPIO_Port GPIOA
 #define PS2_MISO_Pin GPIO_PIN_6
@@ -106,6 +116,8 @@ void Error_Handler(void);
 #define Stepper_Dir_GPIO_Port GPIOF
 #define Stepper_Step_Pin GPIO_PIN_13
 #define Stepper_Step_GPIO_Port GPIOF
+#define PS2_CS_Pin GPIO_PIN_14
+#define PS2_CS_GPIO_Port GPIOD
 #define servo_pwm_Pin GPIO_PIN_7
 #define servo_pwm_GPIO_Port GPIOB
 
@@ -124,6 +136,14 @@ void LCD_SendCommand(uint8_t command);
 void LCD_SendData(uint8_t data);
 void LCD_Clear(void);
 void LCD_WriteString(char* str);
+void LCD_Init(void);
+
+int calculate_rotation(int x, int* dir);
+int calculate_pitch_change(int y);
+void aim_at_coords(int x, int y);
+void start_pwm_N_steps(uint32_t N);
+
+extern SPI_HandleTypeDef hspi1;
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

@@ -1,0 +1,7 @@
+IO_LOC "clk" 47
+IO_LOC "r" 9
+IO_LOC "g" 11
+IO_LOC "b" 10
+IO_LOC "h_sync" 40
+IO_LOC "v_sync" 41
+IO_LOC "reset" 13

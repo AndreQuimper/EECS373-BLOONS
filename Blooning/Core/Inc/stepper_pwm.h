@@ -13,7 +13,7 @@
 
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
-extern volatile uint8_t stepper_active;
+extern uint8_t stepper_active;
 
 void PWM_Init(void);
 void Start_PWM_For_N_Periods(uint32_t N);

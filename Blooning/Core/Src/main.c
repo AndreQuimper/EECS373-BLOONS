@@ -23,6 +23,8 @@
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
 #include "string.h"
+#include "stepper_pwm.h"
+#include "stdlib.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -49,13 +51,37 @@ TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim15;
+TIM_HandleTypeDef htim16;
 
 /* USER CODE BEGIN PV */
+#pragma pack(1) //do not pad inside struct
+struct coord{
+	char color;
+	uint8_t x;
+	uint8_t y;
+};
+#pragma pack() //restore default packing
+
 int coord_cnt;
-uint8_t coord_list[255];
-int manual_mode = 0; //0 = automatic, 1 = manual
-int stepper_active = 0; //0 = stepper pwm is off, 1 = stepper pwm is on
-int current_pitch = 0;
+
+int change_mode = 1; //Track if the mode is changed
+
+struct coord coord_list[255];
+enum TurretMode {
+	AUTO_RBG, //slowest to fastest (IN GAME)
+	AUTO_GBR, // fastest to slowest (IN_GAME)
+	MANUAL, // use ps2 controller
+	RELOAD
+};
+
+int cartridge_state = 0;
+
+
+enum TurretMode current_mode = MANUAL;
+enum TurretMode mode_before_reload;
+
+uint8_t stepper_active = 0; //0 = stepper pwm is off, 1 = stepper pwm is on
+int current_pitch = PITCH_REST/2;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -68,6 +94,7 @@ static void MX_USART1_UART_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM15_Init(void);
+static void MX_TIM16_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -87,26 +114,26 @@ void set_pitch(int degrees_from_level){
 	set_tim4_ccr2(degrees_from_level*(SERVO_MAX-SERVO_MIN)/180 + SERVO_MIN);
 }
 
-void set_tim15_ccr(uint16_t val){
-	TIM15->CCR1 = val;
-}
-
 // this function is to control the angle on the servo that controls the trigger
 //degrees should be 0 to 180
 void set_trigger_angle(int degrees){
-	set_tim15_ccr(degrees*(SERVO_MAX-SERVO_MIN)/180 + SERVO_MIN);
+	int val = degrees*(SERVO_MAX-SERVO_MIN)/180 + SERVO_MIN;
+	TIM15->CCR1 = val;
 }
 
-//use the STEP_CW or STEP_CCW macros
-//this function is deprecated as we no longer use gpio for the stepper, instead we use pwm
-void motor_take_step(int dir){
-	HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,dir); //set the direction of the step
-	HAL_GPIO_WritePin(Stepper_Step_GPIO_Port,Stepper_Step_Pin,GPIO_PIN_SET);
-	HAL_GPIO_WritePin(Stepper_Step_GPIO_Port,Stepper_Step_Pin,GPIO_PIN_RESET);
+// this function is to control the angle on the servo that controls the cartridge
+//degrees should be 0 to 180
+void set_cartridge_angle(int degrees){
+	int val = degrees*(SERVO_MAX-SERVO_MIN)/180 + SERVO_MIN;
+	TIM16->CCR1 = val;
 }
 
 void read_coords(){
-	char *tx_buf = "request\n";
+	unsigned char *tx_buf = "request\n";
+	while(stepper_active){
+		continue;
+	}
+	// after we are done moving give the RPI time to recompute
 	HAL_UART_Transmit(&huart1, tx_buf, 8, 1000);
 	uint8_t cnt_rx;
 	HAL_UART_Receive(&huart1, &cnt_rx, 1, 1000);
@@ -114,165 +141,44 @@ void read_coords(){
 	if(coord_cnt > 20)
 		coord_cnt = 20;
 	HAL_UART_Receive(&huart1, coord_list, coord_cnt*3, 500); // color, x, y
-	HAL_Delay(1000);
 
-}
-
-
-//if the stepper motor seems shaky just put some weight on it
-void spin_motor_test(void){
-	for(int i = 0; i < 5000; i++){
-		motor_take_step(STEP_CW);
-		HAL_Delay(2);
-	}
-		  for(int i = 0; i < 15000; i++){
-		motor_take_step(STEP_CCW);
-		HAL_Delay(2);
-	}
-}
-
-
-//ps2 transaction from class presentation
-//for reference see https://docs.google.com/presentation/d/12RinNV7N_wY5BfJECBLrAtkQDGO9stQqThNh4kqjwPg/edit#slide=id.g3420c6d2660_0_211
-void ps2_transaction(void){
-	static uint8_t PSX_RX[21];
-	static uint8_t PSX_TX[21] = {
-	     0x01, 0x42, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	     0x00, 0x00, 0x00, 0x00, 0x00
-	 };
-   // Get state of all buttons and store it in PSX_RX (Transmission length 21)
-   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); // CS LOW
-   HAL_SPI_TransmitReceive(&hspi1, PSX_TX, PSX_RX, 21, 10);
-   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET); // CS HIGH
-
-   // get state of d-pad and X button
-   int dpad_status = ~PSX_RX[3];
-   int dpad_up = dpad_status & DPAD_UP_MASK;
-   int dpad_down = dpad_status & DPAD_DOWN_MASK;
-   int dpad_left = dpad_status & DPAD_LEFT_MASK;
-   int dpad_right = dpad_status & DPAD_RIGHT_MASK;
-
-   int button_status = ~PSX_RX[4];
-   int button_x = button_status & BUTTON_X_MASK;
-   //note that they will not be 1 or 0, they will be 0 or positive int
-   //TODO: do something with this data
-   if(dpad_up){
-	   printf("UP IS PRESSED \r\n");
-   }
-   if(dpad_down){
-   	   printf("DOWN IS PRESSED \r\n");
-   }
-   if(dpad_left){
-   	   printf("LEFT IS PRESSED \r\n");
-   }
-   if(dpad_right){
-   	   printf("RIGHT IS PRESSED \r\n");
-   }
-   if(button_x){
-   	   printf("X IS PRESSED \r\n");
-   }
 }
 
 //INTERRUPT HANDLER
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if(GPIO_Pin == GPIO_PIN_13){
 		//USER BUTTON WAS PRESSED
-		int speed = 5000; //button is debouncing :)
+		int speed = 50000; //button is debouncing :)
 		for(int i = 0; i < speed; i++){
 			continue; //can't use HAL_DELAY since SYS_Tick interrupt priority is low
 		}
-		manual_mode = 1 - manual_mode; //toggle mode
-		uint32_t *p = EXTI_ADDR + EXTI_PR_OFFSET;
+		if(current_mode == RELOAD){
+			current_mode = mode_before_reload;
+		}
+		else{
+			current_mode = (current_mode + 1) % 3; //cycle modes
+			change_mode = 1; //Mode was changed so LCD needs to be updated
+		}
+		uint32_t *p = EXTI_ADDR 	+ EXTI_PR_OFFSET;
 		*p |= (1<<13); //clear interrupt pending
 	}
 }
 
-void LCD_SendCommand4(uint8_t command) {
- HAL_GPIO_WritePin(RS_GPIO_Port, RS_Pin, GPIO_PIN_RESET);
- HAL_Delay(2);
- HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, command & 1);
- HAL_GPIO_WritePin(D5_GPIO_Port, D5_Pin, (command >> 1) & 1);
- HAL_GPIO_WritePin(D6_GPIO_Port, D6_Pin, (command >> 2) & 1);
- HAL_GPIO_WritePin(D7_GPIO_Port, D7_Pin, (command >> 3) & 1);
- HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_SET);
- HAL_Delay(2);
- HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_RESET);
- HAL_Delay(10);
-}
-void LCD_Init(void) {
- HAL_Delay(500);
- LCD_SendCommand4(0x3);
- LCD_SendCommand4(0x3);
- LCD_SendCommand4(0x3);
- LCD_SendCommand4(0x2);
- LCD_SendCommand(0x2C);
- LCD_SendCommand(0x0F);
- LCD_SendCommand(0x01);
- LCD_SendCommand(0x06);
- LCD_SendCommand(0x0C);
-}
-void LCD_SendCommand(uint8_t command) {
- HAL_GPIO_WritePin(RS_GPIO_Port, RS_Pin, GPIO_PIN_RESET);
- HAL_Delay(2);
- HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, (command >> 4) & 1);
- HAL_GPIO_WritePin(D5_GPIO_Port, D5_Pin, (command >> 5) & 1);
- HAL_GPIO_WritePin(D6_GPIO_Port, D6_Pin, (command >> 6) & 1);
- HAL_GPIO_WritePin(D7_GPIO_Port, D7_Pin, (command >> 7) & 1);
- HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_SET);
- HAL_Delay(2);
- HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_RESET);
- HAL_Delay(2);
- HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, command & 1);
- HAL_GPIO_WritePin(D5_GPIO_Port, D5_Pin, (command >> 1) & 1);
- HAL_GPIO_WritePin(D6_GPIO_Port, D6_Pin, (command >> 2) & 1);
- HAL_GPIO_WritePin(D7_GPIO_Port, D7_Pin, (command >> 3) & 1);
- HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_SET);
- HAL_Delay(2);
- HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_RESET);
- HAL_Delay(30);
-}
-void LCD_SendData(uint8_t data) {
- HAL_GPIO_WritePin(RS_GPIO_Port, RS_Pin, GPIO_PIN_SET);
- HAL_Delay(2);
- HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, (data >> 4) & 1);
- HAL_GPIO_WritePin(D5_GPIO_Port, D5_Pin, (data >> 5) & 1);
- HAL_GPIO_WritePin(D6_GPIO_Port, D6_Pin, (data >> 6) & 1);
- HAL_GPIO_WritePin(D7_GPIO_Port, D7_Pin, (data >> 7) & 1);
- HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_SET);
- HAL_Delay(2);
- HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_RESET);
- HAL_Delay(2);
- HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, data & 1);
- HAL_GPIO_WritePin(D5_GPIO_Port, D5_Pin, (data >> 1) & 1);
- HAL_GPIO_WritePin(D6_GPIO_Port, D6_Pin, (data >> 2) & 1);
- HAL_GPIO_WritePin(D7_GPIO_Port, D7_Pin, (data >> 3) & 1);
- HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_SET);
- HAL_Delay(2);
- HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_RESET);
- HAL_Delay(2);
-}
-void LCD_Clear(void) {
-LCD_SendCommand(0x01);
-HAL_Delay(2);
-}
 
-void LCD_WriteLines(char* line1, char* line2){
-	LCD_Clear();
-	//LCD_SendCommand(0b10000000);
-	LCD_WriteString(line1);
-	LCD_SendCommand(0b11000000);
-	LCD_WriteString(line2);
-}
-void LCD_WriteString(char* str) {
-	while(*str) {
-		LCD_SendData(*str++);
-		HAL_Delay(2);
-	}
-}
 
-//TODO: update this function to use pwm for stepper
 void manual_control(void){
+	//TODO: make this a function lcd stuff
+	static int displayed = 1;
+	if (displayed){
+		int bands = MAX_RUBBER_BANDS - cartridge_state;
+		char l2[100];
+		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
+		LCD_WriteLines("Mode: MANUAL", l2);
+		change_mode = 0;
+		displayed = 0;
+	}
+
+	printf("MODE: MANUAL \n\r");
 	static uint8_t PSX_RX[21];
 	static uint8_t PSX_TX[21] = {
 		 0x01, 0x42, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -280,9 +186,9 @@ void manual_control(void){
 		 0x00, 0x00, 0x00, 0x00, 0x00
 	 };
    // Get state of all buttons and store it in PSX_RX (Transmission length 21)
-   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); // CS LOW
+   HAL_GPIO_WritePin(PS2_CS_GPIO_Port, PS2_CS_Pin, GPIO_PIN_RESET); // CS LOW
    HAL_SPI_TransmitReceive(&hspi1, PSX_TX, PSX_RX, 21, 10);
-   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET); // CS HIGH
+   HAL_GPIO_WritePin(PS2_CS_GPIO_Port, PS2_CS_Pin, GPIO_PIN_SET); // CS HIGH
 
    // get state of d-pad and X button
    int dpad_status = ~PSX_RX[3];
@@ -296,36 +202,43 @@ void manual_control(void){
 
    //note that they will not be 1 or 0, they will be 0 or positive int
    if(dpad_up){
-	   if(current_pitch < 85){
-		   current_pitch+=5;
+	   if(current_pitch > 5){
+		   current_pitch-=1;
+		   set_pitch(current_pitch);
+		   HAL_Delay(10);
 	   }
-	   set_pitch(current_pitch);
+
    }
    if(dpad_down){
-	   if(current_pitch > 5){
-		   current_pitch-=5;
+	   if(current_pitch < 85){
+		   current_pitch+=1;
+		   set_pitch(current_pitch);
+		   HAL_Delay(10);
 	   }
-	   set_pitch(current_pitch);
+
    }
    if(dpad_left){
-	   for(int i = 0; i < 50; i++){
-		   motor_take_step(STEP_CCW);
-		   HAL_Delay(1);
-	   }
+	   HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,STEP_CCW); //set the direction of the step
+	   start_pwm_N_steps(DPAD_STEPS);
    }
    if(dpad_right){
-	   for(int i = 0; i < 50; i++){
-		   motor_take_step(STEP_CW);
-		   HAL_Delay(1);
-	   }
+	   HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,STEP_CW); //set the direction of the step
+	   start_pwm_N_steps(DPAD_STEPS);
    }
 
-   //TODO: shoot when button_x is asserted
+   if(button_x){
+	   shoot();
+	   HAL_Delay(400);
+   }
+
 }
 
 // Function to start pwm of stepper motor for N steps
 // see TIM2_IRQHandler for interrupt handler related to this functionality
 void start_pwm_N_steps(uint32_t N){
+	if(N == 0){
+		return; //this would explode
+	}
 	//stop pwm
 	HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_2);
 	HAL_TIM_Base_Stop(&htim2);
@@ -340,7 +253,7 @@ void start_pwm_N_steps(uint32_t N){
 	htim2.Instance = TIM2;
 	htim2.Init.Prescaler = 0;
 	htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-	htim2.Init.Period = N - 1;  // Interrupt after N periods
+	htim2.Init.Period = N;  // Interrupt after N+1 periods
 	htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
 	if(HAL_TIM_Base_Init(&htim2) != HAL_OK){
 		Error_Handler(); //debug
@@ -363,8 +276,20 @@ void start_pwm_N_steps(uint32_t N){
 
 // Use macro MOTOR_FULL_ROTATION_STEPS
 int calculate_rotation(int x, int* dir){
-	//TODO:
-	return 0;
+	if(x < CAMERA_MID){
+		*dir = STEP_CW;
+	}
+	else{
+		*dir = STEP_CCW;
+	}
+	int offset = abs(x-CAMERA_MID);
+	if(offset < ON_TARGET){
+		return offset;
+	}
+
+	float degrees_to_step = offset*CAMERA_FOV/(float)CAMERA_MID;
+	int num_steps = MOTOR_FULL_ROTATION_STEPS*degrees_to_step/360;
+	return num_steps/2;
 }
 
 //should be negative is appropriate
@@ -375,19 +300,114 @@ int calculate_pitch_change(int y){
 
 //TODO: implement how to translate from coordinates to angle of rotation
 void aim_at_coords(int x, int y){
-	//calculate movement from coords
-	if(stepper_active){
-		return;
-	}
+	//calculate rotation
 	int dir;
 	int n_steps = calculate_rotation(x,&dir);
+	printf("nsteps = %d \n\r",n_steps);
 	current_pitch += calculate_pitch_change(y);
 
-	//move
+	//aim
 	HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,dir); //set the direction of the step
-	start_pwm_N_steps(n_steps);
+	if(n_steps){
+		start_pwm_N_steps(n_steps);
+	}
 	set_pitch(current_pitch);
 }
+
+void automatic_mode_demo(){
+	if(current_mode == AUTO_GBR && change_mode){
+		int bands = MAX_RUBBER_BANDS - cartridge_state;
+		char l2[100];
+		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
+		LCD_WriteLines("Mode: GBR", l2);
+		change_mode = 0;
+
+		printf("MODE: AUTO_GBR\n\r");
+	}
+	if(current_mode == AUTO_RBG && change_mode){
+		int bands = MAX_RUBBER_BANDS - cartridge_state;
+		char l2[100];
+		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
+		LCD_WriteLines("Mode: RBG", l2);
+		change_mode = 0;
+
+		printf("MODE: AUTO_RBG\n\r");
+	}
+	read_coords();
+	printf("N coords received = %d \n\r", coord_cnt);
+	for(int i = 0; i < coord_cnt; i++){
+		printf("color = %c, x = %d, y = %d \n\r ",coord_list[i].color,coord_list[i].x,coord_list[i].y);
+		switch (current_mode){
+		case AUTO_GBR:
+			if(coord_list[i].color == 'G'){
+				printf("aiming\n\r");
+				aim_at_coords(coord_list[i].x,coord_list[i].y);
+				goto done_aiming;
+			}
+			break;
+		case AUTO_RBG:
+			if(coord_list[i].color == 'B'){ //TODO: make this red?
+				printf("aiming\n\r");
+				aim_at_coords(coord_list[i].x,coord_list[i].y);
+				goto done_aiming;
+			}
+			break;
+		default:
+			printf("turret mode error\n\r");
+			return;
+		}
+
+	}
+done_aiming:
+	coord_cnt = 0;
+	memset(coord_list, 0, sizeof(coord_list));
+	HAL_Delay(200);
+}
+
+void shoot(void){
+	//Shoot
+	set_trigger_angle(TRIGGER_SHOOT);
+	HAL_Delay(1100);
+	set_trigger_angle(TRIGGER_REST);
+	HAL_Delay(1100);
+
+	//Get next rubber band in position
+	cartridge_state++;
+	if(cartridge_state == MAX_RUBBER_BANDS){ //if out of bands, reload
+		mode_before_reload = current_mode;
+		current_mode = RELOAD;
+		set_cartridge_angle(CARTRIDGE_OFFSET);
+		int bands = MAX_RUBBER_BANDS - cartridge_state;
+		char l2[100];
+		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
+		LCD_WriteLines("Mode: RELOAD", l2);
+		cartridge_state = 0;
+		return;
+	}
+	//TODO make this a function
+	if (current_mode == MANUAL){ //UPDATING RUBBERBAND COUNTS
+		int bands = MAX_RUBBER_BANDS - cartridge_state;
+		char l2[100];
+		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
+		LCD_WriteLines("Mode: MANUAL", l2);
+	}
+	if(current_mode == AUTO_GBR){
+		int bands = MAX_RUBBER_BANDS - cartridge_state;
+		char l2[100];
+		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
+		LCD_WriteLines("Mode: GBR", l2);
+	}
+	if(current_mode == AUTO_RBG){
+		int bands = MAX_RUBBER_BANDS - cartridge_state;
+		char l2[100];
+		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
+		LCD_WriteLines("Mode: RBG", l2);
+	}
+
+	set_cartridge_angle(CARTRIDGE_ANGLE*cartridge_state+CARTRIDGE_OFFSET);
+	return;
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -426,6 +446,7 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM2_Init();
   MX_TIM15_Init();
+  MX_TIM16_Init();
   /* USER CODE BEGIN 2 */
   LCD_Init();
   /* USER CODE END 2 */
@@ -434,19 +455,20 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2); //servo pwm
   HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1); //trigger pwm
+  HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1); //cartridge pwm
   //initialize the servo with to be level with ground
-  set_pitch(0);
+  set_pitch(PITCH_REST/2);
+  set_trigger_angle(TRIGGER_REST);
+  set_cartridge_angle(CARTRIDGE_OFFSET);
   while (1)
   {
-	  //start_pwm_N_steps(200*16);
-//	  read_coords();
-//	  for(int i = 0; i < 3*coord_cnt; i+=3){
-//		  printf("color = %c, x = %d, y = %d \n\r ",coord_list[i],coord_list[i+1],coord_list[i+2]);
-//	  }
-//	  memset(coord_list, 0, sizeof(coord_list));
-//	  HAL_Delay(1000);
-
-
+	  if(current_mode == MANUAL){
+		  manual_control();
+	  }
+	  else{
+		  continue;
+		  automatic_mode_demo();
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -700,7 +722,7 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 0;
+  htim3.Init.Prescaler = 9;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 1999;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -725,7 +747,7 @@ static void MX_TIM3_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 8;
+  sConfigOC.Pulse = 10;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
@@ -874,6 +896,68 @@ static void MX_TIM15_Init(void)
 }
 
 /**
+  * @brief TIM16 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM16_Init(void)
+{
+
+  /* USER CODE BEGIN TIM16_Init 0 */
+
+  /* USER CODE END TIM16_Init 0 */
+
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
+
+  /* USER CODE BEGIN TIM16_Init 1 */
+
+  /* USER CODE END TIM16_Init 1 */
+  htim16.Instance = TIM16;
+  htim16.Init.Prescaler = 39;
+  htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim16.Init.Period = 1999;
+  htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim16.Init.RepetitionCounter = 0;
+  htim16.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim16) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim16) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_PWM_ConfigChannel(&htim16, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim16, &sBreakDeadTimeConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM16_Init 2 */
+
+  /* USER CODE END TIM16_Init 2 */
+  HAL_TIM_MspPostInit(&htim16);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -896,14 +980,14 @@ static void MX_GPIO_Init(void)
   HAL_PWREx_EnableVddIO2();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(PS2_CS_GPIO_Port, PS2_CS_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOF, Stepper_Dir_Pin|Stepper_Step_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7|GPIO_PIN_10|GPIO_PIN_12|GPIO_PIN_13
                           |GPIO_PIN_14|GPIO_PIN_15, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(PS2_CS_GPIO_Port, PS2_CS_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PE2 PE3 */
   GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3;
@@ -948,13 +1032,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG_ADC_CONTROL;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PS2_CS_Pin */
-  GPIO_InitStruct.Pin = PS2_CS_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(PS2_CS_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PB1 */
   GPIO_InitStruct.Pin = GPIO_PIN_1;
@@ -1014,6 +1091,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   GPIO_InitStruct.Alternate = GPIO_AF7_USART3;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PS2_CS_Pin */
+  GPIO_InitStruct.Pin = PS2_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(PS2_CS_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PC6 */
   GPIO_InitStruct.Pin = GPIO_PIN_6;
