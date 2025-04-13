@@ -7,7 +7,15 @@ module driver(
 	output reg h_sync,
 	output reg v_sync
 );
-	// Use the PLL to generate a 25MHz clock
+
+    wire signed [13:0] dx;
+    wire signed [13:0] dy;
+    wire signed [24:0] dx_sq, dy_sq;
+
+    parameter signed [12:0] x_center = 13'd320;
+    parameter signed [12:0] y_center = 13'd240;
+    parameter signed [12:0] radius   = 13'd40;
+    parameter signed [12:0] radius_sq   = 13'd1600;
 	
 	parameter [9:0] H_ACTIVE = 10'd639;
 	parameter [9:0] H_FRONT = 10'd15;
@@ -27,7 +35,7 @@ module driver(
 	parameter [1:0] V_PULSE_STATE = 2'd2;
 	parameter [1:0] V_BACK_STATE = 2'd3;
 	reg [1:0] h_state, v_state, next_h_state, next_v_state;
-	reg [9:0] X_Counter, V_Counter, Next_X_Counter, Next_V_Counter;
+	reg signed [12:0] X_Counter, V_Counter, Next_X_Counter, Next_V_Counter;
 	reg next_h_sync, next_v_sync, line_done, next_line_done;
     reg [2:0] color, next_color;
 	always @* begin
@@ -38,13 +46,11 @@ module driver(
 		next_h_sync = h_sync;
 		next_v_sync = v_sync;
         next_line_done   = line_done;
-		
 		if (h_state == H_ACTIVE_STATE) begin
 			Next_X_Counter = (X_Counter == H_ACTIVE) ? 10'd0 : (X_Counter + 10'd1);
 			next_h_sync = 1;
 			next_line_done = 0;
 			next_h_state = (X_Counter == H_ACTIVE) ? H_FRONT_STATE : H_ACTIVE_STATE;
-            next_color = (((X_Counter > 320 && X_Counter < 330) | (X_Counter > 340 && X_Counter < 350)) && ((V_Counter > 235 && V_Counter < 230) | (V_Counter > 245 && V_Counter < 255))) ? 1 : 0;
 		end else if (h_state == H_FRONT_STATE) begin
 			Next_X_Counter = (X_Counter == H_FRONT) ? 10'd0 : (X_Counter + 10'd1);
 			next_h_sync = 1;
@@ -77,6 +83,22 @@ module driver(
 			next_v_state = (line_done) ? ((V_Counter == V_BACK) ? V_ACTIVE_STATE : V_BACK_STATE) : V_BACK_STATE;
 		end
 	end
+
+    always @* begin
+        next_color = 3'd0;
+        if(h_state == H_ACTIVE_STATE && v_state == V_ACTIVE_STATE) begin
+            next_color = (dx_sq+dy_sq <= radius_sq) ? 3'd1 : 3'd0;
+        end
+    end
+
+    assign dx = (X_Counter > x_center) ? (X_Counter - x_center) : (x_center - X_Counter);
+    assign dy = (V_Counter > y_center) ? (V_Counter - y_center) : (y_center - V_Counter);
+    assign dx_sq = (dx*dx);
+    assign dy_sq = (dy*dy);
+    assign r = color[2];
+    assign g = color[1];
+    assign b = color[0];
+
 	always @(posedge clk) begin
 		if (~reset) begin
 			X_Counter <= 10'd0;
@@ -98,10 +120,4 @@ module driver(
             color <= next_color;
 		end
 	end
-    assign r = (h_state == H_ACTIVE_STATE && v_state == V_ACTIVE_STATE) ? color[0] : 0;
-    assign g = (h_state == H_ACTIVE_STATE && v_state == V_ACTIVE_STATE) ? color[1] : 0;
-    assign b = (h_state == H_ACTIVE_STATE && v_state == V_ACTIVE_STATE) ? color[2] : 0;
-//    assign r = (h_state == H_ACTIVE_STATE && v_state == V_ACTIVE_STATE) ? (V_Counter[3] | X_Counter==256) : 0;
-//    assign g = (h_state == H_ACTIVE_STATE && v_state == V_ACTIVE_STATE) ? (X_Counter[5] ^ X_Counter[6]) | (X_Counter==256) : 0;
-//    assign b = (h_state == H_ACTIVE_STATE && v_state == V_ACTIVE_STATE) ? (X_Counter[4] | X_Counter==256) : 0;
 endmodule
