@@ -154,6 +154,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 		}
 		if(current_mode == RELOAD){
 			current_mode = mode_before_reload;
+			change_mode = 1;
 		}
 		else{
 			current_mode = (current_mode + 1) % 3; //cycle modes
@@ -168,14 +169,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 
 void manual_control(void){
 	//TODO: make this a function lcd stuff
-	static int displayed = 1;
-	if (displayed){
-		int bands = MAX_RUBBER_BANDS - cartridge_state;
-		char l2[100];
-		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
-		LCD_WriteLines("Mode: MANUAL", l2);
-		change_mode = 0;
-		displayed = 0;
+	//static int displayed = 1;
+	if (change_mode){
+		lcd_display();
 	}
 
 	printf("MODE: MANUAL \n\r");
@@ -199,6 +195,7 @@ void manual_control(void){
 
    int button_status = ~PSX_RX[4];
    int button_x = button_status & BUTTON_X_MASK;
+   int button_y = button_status & BUTTON_Y_MASK;
 
    //note that they will not be 1 or 0, they will be 0 or positive int
    if(dpad_up){
@@ -315,24 +312,10 @@ void aim_at_coords(int x, int y){
 }
 
 void automatic_mode_demo(){
-	if(current_mode == AUTO_GBR && change_mode){
-		int bands = MAX_RUBBER_BANDS - cartridge_state;
-		char l2[100];
-		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
-		LCD_WriteLines("Mode: GBR", l2);
-		change_mode = 0;
-
-		printf("MODE: AUTO_GBR\n\r");
+	if(change_mode){
+		lcd_display();
 	}
-	if(current_mode == AUTO_RBG && change_mode){
-		int bands = MAX_RUBBER_BANDS - cartridge_state;
-		char l2[100];
-		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
-		LCD_WriteLines("Mode: RBG", l2);
-		change_mode = 0;
 
-		printf("MODE: AUTO_RBG\n\r");
-	}
 	read_coords();
 	printf("N coords received = %d \n\r", coord_cnt);
 	for(int i = 0; i < coord_cnt; i++){
@@ -376,7 +359,7 @@ void shoot(void){
 	if(cartridge_state == MAX_RUBBER_BANDS){ //if out of bands, reload
 		mode_before_reload = current_mode;
 		current_mode = RELOAD;
-		set_cartridge_angle(CARTRIDGE_OFFSET);
+		set_cartridge_angle(CARTRIDGE_START);
 		int bands = MAX_RUBBER_BANDS - cartridge_state;
 		char l2[100];
 		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
@@ -385,6 +368,36 @@ void shoot(void){
 		return;
 	}
 	//TODO make this a function
+	lcd_display();
+
+	set_cartridge_angle(CARTRIDGE_ANGLE*cartridge_state+CARTRIDGE_OFFSET);
+	return;
+}
+
+void reload_done_check(void){
+	static uint8_t PSX_RX[21];
+	static uint8_t PSX_TX[21] = {
+		 0x01, 0x42, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		 0x00, 0x00, 0x00, 0x00, 0x00
+	 };
+     // Get state of all buttons and store it in PSX_RX (Transmission length 21)
+     HAL_GPIO_WritePin(PS2_CS_GPIO_Port, PS2_CS_Pin, GPIO_PIN_RESET); // CS LOW
+     HAL_SPI_TransmitReceive(&hspi1, PSX_TX, PSX_RX, 21, 10);
+     HAL_GPIO_WritePin(PS2_CS_GPIO_Port, PS2_CS_Pin, GPIO_PIN_SET); // CS HIGH
+
+     int button_status = ~PSX_RX[4];
+     int button_y = button_status & BUTTON_Y_MASK;
+
+	 if(button_y && mode_before_reload == MANUAL){
+		HAL_Delay(200);
+		current_mode = mode_before_reload;
+		change_mode = 1;
+	 }
+	 return;
+}
+
+void lcd_display(void){
 	if (current_mode == MANUAL){ //UPDATING RUBBERBAND COUNTS
 		int bands = MAX_RUBBER_BANDS - cartridge_state;
 		char l2[100];
@@ -403,9 +416,7 @@ void shoot(void){
 		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
 		LCD_WriteLines("Mode: RBG", l2);
 	}
-
-	set_cartridge_angle(CARTRIDGE_ANGLE*cartridge_state+CARTRIDGE_OFFSET);
-	return;
+	change_mode = 0;
 }
 
 /* USER CODE END 0 */
@@ -459,14 +470,17 @@ int main(void)
   //initialize the servo with to be level with ground
   set_pitch(PITCH_REST/2);
   set_trigger_angle(TRIGGER_REST);
-  set_cartridge_angle(CARTRIDGE_OFFSET);
+  set_cartridge_angle(CARTRIDGE_START);
+  //set_cartridge_angle(5);
   while (1)
   {
 	  if(current_mode == MANUAL){
 		  manual_control();
 	  }
-	  else{
-		  continue;
+	  else if (current_mode == RELOAD){
+		  reload_done_check();
+	  }
+	  else if (current_mode == AUTO_GBR || current_mode == AUTO_RBG){
 		  automatic_mode_demo();
 	  }
     /* USER CODE END WHILE */

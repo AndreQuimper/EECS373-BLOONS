@@ -60,6 +60,7 @@ extern "C" {
 #define DPAD_DOWN_MASK (1<<6)
 #define DPAD_LEFT_MASK (1<<7)
 #define BUTTON_X_MASK (1<<6)
+#define BUTTON_Y_MASK (1<<4)
 #define EXTI_PR_OFFSET 0x14
 #define EXTI_ADDR 0x40010400UL
 #define COLOR_ORANGE 'O'
@@ -91,6 +92,7 @@ extern "C" {
 #define TRIGGER_REST 50
 #define TRIGGER_SHOOT 165
 #define CARTRIDGE_ANGLE 25
+#define CARTRIDGE_START 5
 #define CARTRIDGE_OFFSET 10
 #define MAX_RUBBER_BANDS 7
 #define PITCH_REST 90
