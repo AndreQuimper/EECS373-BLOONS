@@ -9,3 +9,6 @@
 [ps2 presentation](https://docs.google.com/presentation/d/12RinNV7N_wY5BfJECBLrAtkQDGO9stQqThNh4kqjwPg/edit#slide=id.g3420c6d2660_0_211)
 [guide](https://store.curiousinventor.com/guides/PS2#hardware)
 [correct ioc](https://www.reddit.com/r/embedded/comments/12xq779/ps2_controller_spi_interface/)
+
+#pi 4 pubkey
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGhMO928hxdoy2dlDfpRcV9JpXTo/n3cwkQhHneEUh/m blooners@raspberrypi
