@@ -1,8 +1,8 @@
--d C:\Gowin\Gowin_V1.9.10_x64\IDE\bin\Documents\VGAdriver\impl\gwsynthesis\VGAdriver.vg
+-d C:\Users\hariskh\Documents\373Bloons\VGAdriver\impl\gwsynthesis\VGAdriver.vg
 -p GW1NZ-1-QFN48-6
 -pn GW1NZ-LV1QN48C6/I5
--cst C:\Gowin\Gowin_V1.9.10_x64\IDE\bin\Documents\VGAdriver\src\driver.cst
--cfg C:\Gowin\Gowin_V1.9.10_x64\IDE\bin\Documents\VGAdriver\impl\pnr\device.cfg
+-cst C:\Users\hariskh\Documents\373Bloons\VGAdriver\src\driver.cst
+-cfg C:\Users\hariskh\Documents\373Bloons\VGAdriver\impl\pnr\device.cfg
 -bit
 -tr
 -ph
