@@ -25,6 +25,7 @@
 #include "string.h"
 #include "stepper_pwm.h"
 #include "stdlib.h"
+#include <stdlib.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,6 +51,7 @@ SPI_HandleTypeDef hspi1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
+TIM_HandleTypeDef htim5;
 TIM_HandleTypeDef htim15;
 TIM_HandleTypeDef htim16;
 
@@ -81,7 +83,8 @@ enum TurretMode current_mode = MANUAL;
 enum TurretMode mode_before_reload;
 
 uint8_t stepper_active = 0; //0 = stepper pwm is off, 1 = stepper pwm is on
-int current_pitch = PITCH_REST/2;
+int current_pitch = PITCH_REST;
+int enter_reload_from_auto = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -95,6 +98,7 @@ static void MX_TIM3_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM15_Init(void);
 static void MX_TIM16_Init(void);
+static void MX_TIM5_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -111,7 +115,10 @@ void set_tim4_ccr2(uint16_t val){
 
 // arg should be from 0 to 90
 void set_pitch(int degrees_from_level){
-	set_tim4_ccr2(degrees_from_level*(SERVO_MAX-SERVO_MIN)/180 + SERVO_MIN);
+        // servo is on unsidedown
+        // writing it like this makes my sanity exist
+        degrees_from_level = 180 - degrees_from_level;
+	set_tim4_ccr2(degrees_from_level);
 }
 
 // this function is to control the angle on the servo that controls the trigger
@@ -144,25 +151,54 @@ void read_coords(){
 
 }
 
+void Enter_Auto_Reload(void){
+    static uint8_t PSX_RX[21];
+    static uint8_t PSX_TX[21] = {
+        0x01, 0x42, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    // Get state of all buttons and store it in PSX_RX (Transmission length 21)
+    HAL_GPIO_WritePin(PS2_CS_GPIO_Port, PS2_CS_Pin, GPIO_PIN_RESET); // CS LOW
+    HAL_SPI_TransmitReceive(&hspi1, PSX_TX, PSX_RX, 21, 10);
+    HAL_GPIO_WritePin(PS2_CS_GPIO_Port, PS2_CS_Pin, GPIO_PIN_SET); // CS HIGH
+
+    // get state of d-pad and X button
+    int button_status = ~PSX_RX[4];
+    int button_y = button_status & BUTTON_Y_MASK;
+
+    if (button_y) {
+        enter_reload_from_auto = 1;
+    }
+
+
+}
+
 //INTERRUPT HANDLER
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
-	if(GPIO_Pin == GPIO_PIN_13){
-		//USER BUTTON WAS PRESSED
-		int speed = 50000; //button is debouncing :)
-		for(int i = 0; i < speed; i++){
-			continue; //can't use HAL_DELAY since SYS_Tick interrupt priority is low
-		}
-		if(current_mode == RELOAD){
-			current_mode = mode_before_reload;
-			change_mode = 1;
-		}
-		else{
-			current_mode = (current_mode + 1) % 3; //cycle modes
-			change_mode = 1; //Mode was changed so LCD needs to be updated
-		}
-		uint32_t *p = EXTI_ADDR 	+ EXTI_PR_OFFSET;
-		*p |= (1<<13); //clear interrupt pending
-	}
+    if(GPIO_Pin == GPIO_PIN_13){
+        //USER BUTTON WAS PRESSED
+        int speed = 50000; //button is debouncing :)
+        for(int i = 0; i < speed; i++){
+            continue; //can't use HAL_DELAY since SYS_Tick interrupt priority is low
+        }
+        if(current_mode == RELOAD){
+            current_mode = mode_before_reload;
+            change_mode = 1;
+        }
+        else{
+            current_mode = (current_mode + 1) % 3; //cycle modes
+            if (current_mode == MANUAL) {
+                __HAL_TIM_DISABLE_IT(&htim5, TIM_IT_UPDATE);
+            }
+            else if(current_mode != RELOAD){
+                __HAL_TIM_ENABLE_IT(&htim5, TIM_IT_UPDATE);
+            }
+            change_mode = 1; //Mode was changed so LCD needs to be updated
+        }
+        uint32_t *p = EXTI_ADDR 	+ EXTI_PR_OFFSET;
+        *p |= (1<<13); //clear interrupt pending
+    }
 }
 
 
@@ -195,19 +231,20 @@ void manual_control(void){
 
    int button_status = ~PSX_RX[4];
    int button_x = button_status & BUTTON_X_MASK;
+   int button_y = button_status & BUTTON_Y_MASK;
 
    //note that they will not be 1 or 0, they will be 0 or positive int
    if(dpad_up){
-	   if(current_pitch > PITCH_MAX){
-		   current_pitch-=1;
+	   if(current_pitch < PITCH_MAX){
+		   current_pitch+=1;
 		   set_pitch(current_pitch);
 		   HAL_Delay(10);
 	   }
 
    }
    if(dpad_down){
-	   if(current_pitch < PITCH_MIN){
-		   current_pitch+=1;
+	   if(current_pitch > PITCH_MIN){
+		   current_pitch-=1;
 		   set_pitch(current_pitch);
 		   HAL_Delay(10);
 	   }
@@ -226,6 +263,10 @@ void manual_control(void){
 	   shoot();
 	   HAL_Delay(400);
    }
+    if (button_y) {
+        reload();
+        HAL_Delay(400);
+    }
 
 }
 
@@ -285,27 +326,44 @@ int calculate_rotation(int x, int* dir){
 
 	float degrees_to_step = offset*CAMERA_FOV/(float)CAMERA_MID;
 	int num_steps = MOTOR_FULL_ROTATION_STEPS*degrees_to_step/360;
-	return num_steps/2;
+	return num_steps/3;
 }
 
 //should be negative is appropriate
 int calculate_pitch_change(int y){
-	int diff = CAMERA_MID - y;
-	int res = 0;
-	// Go up
-	if(diff < 0){
-		res = current_pitch <= PITCH_MAX ? 0 : 5;
-	}
-	// Go Down
-	else{
-		res = current_pitch >= PITCH_MIN ? 0 : -5;
-	}
-	return res;
+    int diff = (CAMERA_MID - y);
+    float scale = 0.08*(PITCH_MAX-PITCH_MIN)/(1+pow(2.7182, -0.05*(abs(diff)-39)));
+    int res = 0;
+    if (diff > 5) {
+        // Move up
+        res = current_pitch >= PITCH_MAX ? 0 : (int)scale;
+    }
+    else if(diff < -5){
+        // Move down
+        res = current_pitch <= PITCH_MIN ? 0 : -(int)(0.8*scale);
+    }
+    return res;
 }
 
 //TODO: implement how to translate from coordinates to angle of rotation
 void aim_at_coords(int x, int y){
 	//calculate rotation
+    if (enter_reload_from_auto) {
+        reload();
+        enter_reload_from_auto = 0;
+    }
+
+    static int locked = 0;
+    if (abs(x - CAMERA_MID) <= H_SHOOT_RAD && abs(y - CAMERA_MID) <= V_SHOOT_RAD ) {
+        locked++;
+        if (locked >4) {
+            shoot();
+            locked = 0;
+        }
+        return;
+    }
+    locked = 0;
+
 	int dir;
 	int n_steps = calculate_rotation(x,&dir);
 	printf("nsteps = %d \n\r",n_steps);
@@ -332,14 +390,14 @@ void automatic_mode_demo(){
 		case AUTO_GBR:
 			if(coord_list[i].color == 'G'){
 				printf("aiming\n\r");
-				aim_at_coords(coord_list[i].x,coord_list[i].y);
+				aim_at_coords(coord_list[i].x + CAMERA_X_OFFSET,coord_list[i].y);
 				goto done_aiming;
 			}
 			break;
 		case AUTO_RBG:
 			if(coord_list[i].color == 'B'){ //TODO: make this red?
 				printf("aiming\n\r");
-				aim_at_coords(coord_list[i].x,coord_list[i].y);
+				aim_at_coords(coord_list[i].x + CAMERA_X_OFFSET,coord_list[i].y);
 				goto done_aiming;
 			}
 			break;
@@ -355,6 +413,18 @@ done_aiming:
 	HAL_Delay(200);
 }
 
+void reload(void){
+    mode_before_reload = current_mode;
+    current_mode = RELOAD;
+    set_cartridge_angle(CARTRIDGE_START);
+    int bands = MAX_RUBBER_BANDS - cartridge_state;
+    char l2[100];
+    snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
+    LCD_WriteLines("Mode: RELOAD", l2);
+    cartridge_state = 0;
+    return;
+}
+
 void shoot(void){
 	//Shoot
 	set_trigger_angle(TRIGGER_SHOOT);
@@ -365,15 +435,8 @@ void shoot(void){
 	//Get next rubber band in position
 	cartridge_state++;
 	if(cartridge_state == MAX_RUBBER_BANDS){ //if out of bands, reload
-		mode_before_reload = current_mode;
-		current_mode = RELOAD;
-		set_cartridge_angle(CARTRIDGE_START);
-		int bands = MAX_RUBBER_BANDS - cartridge_state;
-		char l2[100];
-		snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
-		LCD_WriteLines("Mode: RELOAD", l2);
-		cartridge_state = 0;
-		return;
+            reload();
+            return;
 	}
 	//TODO make this a function
 	lcd_display();
@@ -397,7 +460,7 @@ void reload_done_check(void){
      int button_status = ~PSX_RX[4];
      int button_y = button_status & BUTTON_Y_MASK;
 
-	 if(button_y && mode_before_reload == MANUAL){
+	 if(button_y){
 		HAL_Delay(200);
 		current_mode = mode_before_reload;
 		change_mode = 1;
@@ -466,8 +529,23 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM15_Init();
   MX_TIM16_Init();
+  MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
   LCD_Init();
+  {
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  htim3.Init.Prescaler = STEPPER_PRESCALER;
+  htim3.Init.Period = STEPPER_SPEED;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+	  Error_Handler();
+  }
+  	  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+      Error_Handler();
+  }
+  }
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -476,7 +554,7 @@ int main(void)
   HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1); //trigger pwm
   HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1); //cartridge pwm
   //initialize the servo with to be level with ground
-  set_pitch(PITCH_REST/2);
+  set_pitch(PITCH_REST);
   set_trigger_angle(TRIGGER_REST);
   set_cartridge_angle(CARTRIDGE_START);
   //set_cartridge_angle(5);
@@ -744,9 +822,9 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 9;
+  htim3.Init.Prescaler = 0;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 1999;
+  htim3.Init.Period = 3999;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
@@ -769,7 +847,7 @@ static void MX_TIM3_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 10;
+  sConfigOC.Pulse = 1000;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
@@ -839,6 +917,51 @@ static void MX_TIM4_Init(void)
 
   /* USER CODE END TIM4_Init 2 */
   HAL_TIM_MspPostInit(&htim4);
+
+}
+
+/**
+  * @brief TIM5 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM5_Init(void)
+{
+
+  /* USER CODE BEGIN TIM5_Init 0 */
+
+  /* USER CODE END TIM5_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM5_Init 1 */
+
+  /* USER CODE END TIM5_Init 1 */
+  htim5.Instance = TIM5;
+  htim5.Init.Prescaler = 39999;
+  htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim5.Init.Period = 5;
+  htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim5, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim5, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM5_Init 2 */
+
+  /* USER CODE END TIM5_Init 2 */
 
 }
 

@@ -1,21 +1,21 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.h
-  * @brief          : Header for main.c file.
-  *                   This file contains the common defines of the application.
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2025 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.h
+ * @brief          : Header for main.c file.
+ *                   This file contains the common defines of the application.
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2025 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
@@ -46,21 +46,21 @@ extern "C" {
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-#define TIM4_ADDR 0x40000800//timer 4 base register
-#define TIM_CCR2_OFFSET 0x38//capture/compare register 2
+#define TIM4_ADDR 0x40000800 // timer 4 base register
+#define TIM_CCR2_OFFSET 0x38 // capture/compare register 2
 #define CCR_MASK 0xFFFF
 #define SERVO_MIN 50
 #define SERVO_MAX 260
-#define SERVO_MID (SERVO_MIN + SERVO_MAX)/2
-//TODO: verify that CW and CCW directions are correct
+#define SERVO_MID (SERVO_MIN + SERVO_MAX) / 2
+// TODO: verify that CW and CCW directions are correct
 #define STEP_CW 0
 #define STEP_CCW 1
-#define DPAD_UP_MASK (1<<4)
-#define DPAD_RIGHT_MASK (1<<5)
-#define DPAD_DOWN_MASK (1<<6)
-#define DPAD_LEFT_MASK (1<<7)
-#define BUTTON_X_MASK (1<<6)
-#define BUTTON_Y_MASK (1<<4)
+#define DPAD_UP_MASK (1 << 4)
+#define DPAD_RIGHT_MASK (1 << 5)
+#define DPAD_DOWN_MASK (1 << 6)
+#define DPAD_LEFT_MASK (1 << 7)
+#define BUTTON_X_MASK (1 << 6)
+#define BUTTON_Y_MASK (1 << 4)
 #define EXTI_PR_OFFSET 0x14
 #define EXTI_ADDR 0x40010400UL
 #define COLOR_ORANGE 'O'
@@ -70,9 +70,12 @@ extern "C" {
 #define ON_TARGET 12
 #define CAMERA_FOV 65
 #define CAMERA_MID 128
+#define CAMERA_X_OFFSET 20
+#define H_SHOOT_RAD 15
+#define V_SHOOT_RAD 20
 
-#define MOTOR_STEP_SIZE 16 //16th steps
-#define MOTOR_FULL_ROTATION_STEPS 200*MOTOR_STEP_SIZE
+#define MOTOR_STEP_SIZE 16 // 16th steps
+#define MOTOR_FULL_ROTATION_STEPS 200 * MOTOR_STEP_SIZE
 
 #define DPAD_STEPS 50
 
@@ -95,9 +98,12 @@ extern "C" {
 #define CARTRIDGE_START 5
 #define CARTRIDGE_OFFSET 10
 #define MAX_RUBBER_BANDS 7
-#define PITCH_REST 90
-#define PITCH_MAX 35
-#define PITCH_MIN 75
+#define PITCH_REST 55
+#define PITCH_MAX 95
+#define PITCH_MIN 40
+
+#define STEPPER_PRESCALER 4
+#define STEPPER_SPEED 1999
 /* USER CODE END EM */
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
@@ -139,13 +145,15 @@ void ps2_transaction(void);
 void LCD_SendCommand(uint8_t command);
 void LCD_SendData(uint8_t data);
 void LCD_Clear(void);
-void LCD_WriteString(char* str);
+void LCD_WriteString(char *str);
 void LCD_Init(void);
 
-int calculate_rotation(int x, int* dir);
+int calculate_rotation(int x, int *dir);
 int calculate_pitch_change(int y);
 void aim_at_coords(int x, int y);
 void start_pwm_N_steps(uint32_t N);
+
+void Enter_Auto_Reload(void);
 
 extern SPI_HandleTypeDef hspi1;
 /* USER CODE END Private defines */
