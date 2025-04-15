@@ -53,8 +53,8 @@ extern "C" {
 #define SERVO_MAX 260
 #define SERVO_MID (SERVO_MIN + SERVO_MAX)/2
 //TODO: verify that CW and CCW directions are correct
-#define STEP_CW 1
-#define STEP_CCW 0
+#define STEP_CW 0
+#define STEP_CCW 1
 #define DPAD_UP_MASK (1<<4)
 #define DPAD_RIGHT_MASK (1<<5)
 #define DPAD_DOWN_MASK (1<<6)
@@ -96,6 +96,8 @@ extern "C" {
 #define CARTRIDGE_OFFSET 10
 #define MAX_RUBBER_BANDS 7
 #define PITCH_REST 90
+#define PITCH_MAX 35
+#define PITCH_MIN 75
 /* USER CODE END EM */
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);

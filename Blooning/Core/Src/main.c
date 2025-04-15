@@ -195,11 +195,10 @@ void manual_control(void){
 
    int button_status = ~PSX_RX[4];
    int button_x = button_status & BUTTON_X_MASK;
-   int button_y = button_status & BUTTON_Y_MASK;
 
    //note that they will not be 1 or 0, they will be 0 or positive int
    if(dpad_up){
-	   if(current_pitch > 5){
+	   if(current_pitch > PITCH_MAX){
 		   current_pitch-=1;
 		   set_pitch(current_pitch);
 		   HAL_Delay(10);
@@ -207,7 +206,7 @@ void manual_control(void){
 
    }
    if(dpad_down){
-	   if(current_pitch < 85){
+	   if(current_pitch < PITCH_MIN){
 		   current_pitch+=1;
 		   set_pitch(current_pitch);
 		   HAL_Delay(10);
@@ -291,8 +290,17 @@ int calculate_rotation(int x, int* dir){
 
 //should be negative is appropriate
 int calculate_pitch_change(int y){
-	//TODO:
-	return 0;
+	int diff = CAMERA_MID - y;
+	int res = 0;
+	// Go up
+	if(diff < 0){
+		res = current_pitch <= PITCH_MAX ? 0 : 5;
+	}
+	// Go Down
+	else{
+		res = current_pitch >= PITCH_MIN ? 0 : -5;
+	}
+	return res;
 }
 
 //TODO: implement how to translate from coordinates to angle of rotation
