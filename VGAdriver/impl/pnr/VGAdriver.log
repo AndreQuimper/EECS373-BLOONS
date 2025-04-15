@@ -1,7 +1,7 @@
-Reading netlist file: "C:\Gowin\Gowin_V1.9.10_x64\IDE\bin\Documents\VGAdriver\impl\gwsynthesis\VGAdriver.vg"
-Parsing netlist file "C:\Gowin\Gowin_V1.9.10_x64\IDE\bin\Documents\VGAdriver\impl\gwsynthesis\VGAdriver.vg" completed
+Reading netlist file: "C:\Users\hariskh\Documents\373Bloons\VGAdriver\impl\gwsynthesis\VGAdriver.vg"
+Parsing netlist file "C:\Users\hariskh\Documents\373Bloons\VGAdriver\impl\gwsynthesis\VGAdriver.vg" completed
 Processing netlist completed
-Reading constraint file: "C:\Gowin\Gowin_V1.9.10_x64\IDE\bin\Documents\VGAdriver\src\driver.cst"
+Reading constraint file: "C:\Users\hariskh\Documents\373Bloons\VGAdriver\src\driver.cst"
 Physical Constraint parsed completed
 Running placement......
 [10%] Placement Phase 0 completed
@@ -20,10 +20,10 @@ Bitstream generation in progress......
 Bitstream generation completed
 Running power analysis......
 [100%] Power analysis completed
-Generate file "C:\Gowin\Gowin_V1.9.10_x64\IDE\bin\Documents\VGAdriver\impl\pnr\VGAdriver.power.html" completed
-Generate file "C:\Gowin\Gowin_V1.9.10_x64\IDE\bin\Documents\VGAdriver\impl\pnr\VGAdriver.pin.html" completed
-Generate file "C:\Gowin\Gowin_V1.9.10_x64\IDE\bin\Documents\VGAdriver\impl\pnr\VGAdriver.rpt.html" completed
-Generate file "C:\Gowin\Gowin_V1.9.10_x64\IDE\bin\Documents\VGAdriver\impl\pnr\VGAdriver.rpt.txt" completed
-Generate file "C:\Gowin\Gowin_V1.9.10_x64\IDE\bin\Documents\VGAdriver\impl\pnr\VGAdriver.tr.html" completed
-Mon Mar 31 19:45:06 2025
+Generate file "C:\Users\hariskh\Documents\373Bloons\VGAdriver\impl\pnr\VGAdriver.power.html" completed
+Generate file "C:\Users\hariskh\Documents\373Bloons\VGAdriver\impl\pnr\VGAdriver.pin.html" completed
+Generate file "C:\Users\hariskh\Documents\373Bloons\VGAdriver\impl\pnr\VGAdriver.rpt.html" completed
+Generate file "C:\Users\hariskh\Documents\373Bloons\VGAdriver\impl\pnr\VGAdriver.rpt.txt" completed
+Generate file "C:\Users\hariskh\Documents\373Bloons\VGAdriver\impl\pnr\VGAdriver.tr.html" completed
+Mon Apr 14 20:28:46 2025
 

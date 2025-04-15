@@ -1,6 +1,18 @@
 module driver(
 	input clk,
 	input reset,
+    input x_0,
+    input x_1,
+    input x_2,
+    input x_3,
+    input x_4,
+    input x_5,
+    input x_6,
+    input x_7,
+    input x_8,
+    input x_9,
+    input x_10,
+    input x_11,
 	output r,
 	output g,
 	output b,
@@ -8,14 +20,14 @@ module driver(
 	output reg v_sync
 );
 
-    wire signed [13:0] dx;
-    wire signed [13:0] dy;
-    wire signed [24:0] dx_sq, dy_sq;
+    reg signed [13:0] dx, next_dx;
+    reg signed [13:0] dy, next_dy;
+    reg signed [24:0] dx_sq, next_dx_sq, dy_sq,next_dy_sq;
 
-    parameter signed [12:0] x_center = 13'd320;
-    parameter signed [12:0] y_center = 13'd240;
-    parameter signed [12:0] radius   = 13'd40;
-    parameter signed [12:0] radius_sq   = 13'd1600;
+    reg signed [12:0] x_center, next_x_center;
+    parameter signed [12:0] y_center = 13'd320;
+    parameter signed [13:0] radius   = 13'd40;
+    parameter signed [13:0] radius_sq   = 13'd1600;
 	
 	parameter [9:0] H_ACTIVE = 10'd639;
 	parameter [9:0] H_FRONT = 10'd15;
@@ -87,17 +99,33 @@ module driver(
     always @* begin
         next_color = 3'd0;
         if(h_state == H_ACTIVE_STATE && v_state == V_ACTIVE_STATE) begin
-            next_color = (dx_sq+dy_sq <= radius_sq) ? 3'd1 : 3'd0;
+            next_color = ((dx_sq+dy_sq <= radius_sq && dx_sq+dy_sq >= radius_sq-(radius*2)) || dx_sq+dy_sq <= radius) ? 3'd1 : 3'd0;
         end
     end
 
-    assign dx = (X_Counter > x_center) ? (X_Counter - x_center) : (x_center - X_Counter);
-    assign dy = (V_Counter > y_center) ? (V_Counter - y_center) : (y_center - V_Counter);
-    assign dx_sq = (dx*dx);
-    assign dy_sq = (dy*dy);
     assign r = color[2];
     assign g = color[1];
     assign b = color[0];
+
+    always @* begin
+        next_x_center[0] = x_0;
+        next_x_center[1] = x_1;
+        next_x_center[2] = x_2;
+        next_x_center[3] = x_3;
+        next_x_center[4] = x_4;
+        next_x_center[5] = x_5;
+        next_x_center[6] = x_6;
+        next_x_center[7] = x_7;
+        next_x_center[8] = x_8;
+        next_x_center[9] = x_9;
+        next_x_center[10] = x_10;
+        next_x_center[11] = x_11;
+        next_x_center[12] = 0;
+        next_dx = (X_Counter > x_center) ? (X_Counter - x_center) : (x_center - X_Counter);
+        next_dy = (V_Counter > y_center) ? (V_Counter - y_center) : (y_center - V_Counter);
+        next_dx_sq = (dx*dx);
+        next_dy_sq = (dy*dy);
+    end
 
 	always @(posedge clk) begin
 		if (~reset) begin
@@ -109,6 +137,12 @@ module driver(
 			v_sync <= 1;
             line_done <= 0;
             color <= 0;
+            x_center <= 13'd0;
+            dx <= 14'd0;
+            dy <= 14'd0;
+            dx_sq <= 25'd0;
+            dy_sq <= 25'd0;
+//          x_center <= 13'd600;
 		end else begin 
 			X_Counter <= Next_X_Counter;
 			V_Counter <= Next_V_Counter;
@@ -118,6 +152,11 @@ module driver(
 			v_sync <= next_v_sync;
             line_done <= next_line_done;
             color <= next_color;
+            x_center <= next_x_center;
+            dx <= next_dx;
+            dy <= next_dy;
+            dx_sq <= next_dx_sq;
+            dy_sq <= next_dy_sq;
 		end
 	end
 endmodule
