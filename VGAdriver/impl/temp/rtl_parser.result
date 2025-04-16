@@ -1,10 +1,20 @@
 [
  {
-  "InstFile" : "C:/Users/hariskh/Documents/373Bloons/VGAdriver/src/driver.v",
+  "InstFile" : "N:/373Final/VGAdriver/src/driver.v",
   "InstLine" : 1,
   "InstName" : "driver",
-  "ModuleFile" : "C:/Users/hariskh/Documents/373Bloons/VGAdriver/src/driver.v",
+  "ModuleFile" : "N:/373Final/VGAdriver/src/driver.v",
   "ModuleLine" : 1,
-  "ModuleName" : "driver"
+  "ModuleName" : "driver",
+  "SubInsts" : [
+   {
+    "InstFile" : "N:/373Final/VGAdriver/src/driver.v",
+    "InstLine" : 31,
+    "InstName" : "inst",
+    "ModuleFile" : "N:/373Final/VGAdriver/src/memory.v",
+    "ModuleLine" : 1,
+    "ModuleName" : "coord_list"
+   }
+  ]
  }
 ]

@@ -1,18 +1,18 @@
 module driver(
 	input clk,
 	input reset,
-    input x_0,
-    input x_1,
-    input x_2,
-    input x_3,
-    input x_4,
-    input x_5,
-    input x_6,
-    input x_7,
-    input x_8,
-    input x_9,
-    input x_10,
-    input x_11,
+//    input x_0,
+//    input x_1,
+//    input x_2,
+//    input x_3,
+//    input x_4,
+//    input x_5,
+//    input x_6,
+//    input x_7,
+//    input x_8,
+//    input x_9,
+//    input x_10,
+//    input x_11,
 	output r,
 	output g,
 	output b,
@@ -20,14 +20,37 @@ module driver(
 	output reg v_sync
 );
 
+    wire NE1; ////true for addresses 0x60000000 to 0x63FFFFFF
+    wire NWE; //write/read enable
+    wire [3:0] ADDR; //address bus
+    wire [7:0] DATA; //bi-directional read/write data bus
+    wire NWAIT;
+    wire [$clog2(4):0] count;
+    wire [4*3*8-1:0] ram;
+
+    coord_list inst(
+    .reset(reset),
+    .NE1(NE1),
+    .NWE(NWE), 
+    .ADDR(ADDR),
+    .DATA(DATA), 
+    .NWAIT(NWAIT),
+    .count(count),
+    .ram(ram)
+    );
+
+
     reg signed [13:0] dx, next_dx;
     reg signed [13:0] dy, next_dy;
     reg signed [24:0] dx_sq, next_dx_sq, dy_sq,next_dy_sq;
 
-    reg signed [12:0] x_center, next_x_center;
+    reg signed [12:0] x_center;
+    wire signed [12:0]  next_x_center;
     parameter signed [12:0] y_center = 13'd320;
     parameter signed [13:0] radius   = 13'd40;
     parameter signed [13:0] radius_sq   = 13'd1600;
+
+    assign next_x_center = {5'b0, ram[15:8]};
 	
 	parameter [9:0] H_ACTIVE = 10'd639;
 	parameter [9:0] H_FRONT = 10'd15;
@@ -108,19 +131,19 @@ module driver(
     assign b = color[0];
 
     always @* begin
-        next_x_center[0] = x_0;
-        next_x_center[1] = x_1;
-        next_x_center[2] = x_2;
-        next_x_center[3] = x_3;
-        next_x_center[4] = x_4;
-        next_x_center[5] = x_5;
-        next_x_center[6] = x_6;
-        next_x_center[7] = x_7;
-        next_x_center[8] = x_8;
-        next_x_center[9] = x_9;
-        next_x_center[10] = x_10;
-        next_x_center[11] = x_11;
-        next_x_center[12] = 0;
+//        next_x_center[0] = x_0;
+//        next_x_center[1] = x_1;
+//        next_x_center[2] = x_2;
+//        next_x_center[3] = x_3;
+//        next_x_center[4] = x_4;
+//        next_x_center[5] = x_5;
+//        next_x_center[6] = x_6;
+//        next_x_center[7] = x_7;
+//        next_x_center[8] = x_8;
+//        next_x_center[9] = x_9;
+//        next_x_center[10] = x_10;
+//        next_x_center[11] = x_11;
+//        next_x_center[12] = 0;
         next_dx = (X_Counter > x_center) ? (X_Counter - x_center) : (x_center - X_Counter);
         next_dy = (V_Counter > y_center) ? (V_Counter - y_center) : (y_center - V_Counter);
         next_dx_sq = (dx*dx);
