@@ -1,8 +1,8 @@
--d N:\373Final\VGAdriver\impl\gwsynthesis\VGAdriver.vg
+-d N:\EECS373-BLOONS\VGAdriver\impl\gwsynthesis\VGAdriver.vg
 -p GW1NZ-1-QFN48-6
 -pn GW1NZ-LV1QN48C6/I5
--cst N:\373Final\VGAdriver\src\driver.cst
--cfg N:\373Final\VGAdriver\impl\pnr\device.cfg
+-cst N:\EECS373-BLOONS\VGAdriver\src\driver.cst
+-cfg N:\EECS373-BLOONS\VGAdriver\impl\pnr\device.cfg
 -bit
 -tr
 -ph

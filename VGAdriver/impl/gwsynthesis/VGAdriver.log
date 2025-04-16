@@ -1,15 +1,12 @@
 GowinSynthesis start
 Running parser ...
-Analyzing Verilog file 'N:\373Final\VGAdriver\src\driver.v'
-Analyzing Verilog file 'N:\373Final\VGAdriver\src\memory.v'
-Compiling module 'driver'("N:\373Final\VGAdriver\src\driver.v":1)
-Compiling module 'coord_list'("N:\373Final\VGAdriver\src\memory.v":1)
-WARN  (EX1998) : Net 'NE1' does not have a driver("N:\373Final\VGAdriver\src\driver.v":23)
-WARN  (EX1998) : Net 'NWE' does not have a driver("N:\373Final\VGAdriver\src\driver.v":24)
-WARN  (EX1998) : Net 'ADDR[3]' does not have a driver("N:\373Final\VGAdriver\src\driver.v":25)
-WARN  (EX1998) : Net 'DATA[7]' does not have a driver("N:\373Final\VGAdriver\src\driver.v":26)
+Analyzing Verilog file 'N:\EECS373-BLOONS\VGAdriver\src\driver.v'
+Analyzing Verilog file 'N:\EECS373-BLOONS\VGAdriver\src\memory.v'
+Compiling module 'driver'("N:\EECS373-BLOONS\VGAdriver\src\driver.v":1)
+Compiling module 'coord_list'("N:\EECS373-BLOONS\VGAdriver\src\memory.v":1)
 NOTE  (EX0101) : Current top module is "driver"
 [5%] Running netlist conversion ...
+WARN  (CV0020) : Input DATA[7:3] is unused("N:\EECS373-BLOONS\VGAdriver\src\driver.v":19)
 Running device independent optimization ...
 [10%] Optimizing Phase 0 completed
 [15%] Optimizing Phase 1 completed
@@ -25,7 +22,7 @@ Running technical mapping ...
 [75%] Tech-Mapping Phase 2 completed
 [80%] Tech-Mapping Phase 3 completed
 [90%] Tech-Mapping Phase 4 completed
-WARN  (NL0002) : The module "coord_list" instantiated to "inst" is swept in optimizing("N:\373Final\VGAdriver\src\driver.v":40)
-[95%] Generate netlist file "N:\373Final\VGAdriver\impl\gwsynthesis\VGAdriver.vg" completed
-[100%] Generate report file "N:\373Final\VGAdriver\impl\gwsynthesis\VGAdriver_syn.rpt.html" completed
+WARN  (NL0002) : The module "coord_list" instantiated to "inst" is swept in optimizing("N:\EECS373-BLOONS\VGAdriver\src\driver.v":41)
+[95%] Generate netlist file "N:\EECS373-BLOONS\VGAdriver\impl\gwsynthesis\VGAdriver.vg" completed
+[100%] Generate report file "N:\EECS373-BLOONS\VGAdriver\impl\gwsynthesis\VGAdriver_syn.rpt.html" completed
 GowinSynthesis finish

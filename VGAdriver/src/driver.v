@@ -17,7 +17,7 @@ module driver(
 	input NWE, //write/read enable
 	input [3:0] ADDR, //address bus
 	input [7:0] DATA, //bi-directional read/write data bus
-	input NWAIT,
+	output NWAIT,
 	output r,
 	output g,
 	output b,

@@ -5,6 +5,7 @@ IO_LOC "b" 10
 IO_LOC "h_sync" 40
 IO_LOC "v_sync" 41
 IO_LOC "reset" 13
+
 IO_LOC "NE1" 31;
 IO_LOC "NWE" 30;
 IO_LOC "NWAIT" 19;

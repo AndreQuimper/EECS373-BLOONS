@@ -1,15 +1,20 @@
 //
 //Written by GowinSynthesis
 //Tool Version "V1.9.10 (64-bit)"
-//Wed Apr 16 13:22:00 2025
+//Wed Apr 16 14:17:07 2025
 
 //Source file index table:
-//file0 "\N:/373Final/VGAdriver/src/driver.v"
-//file1 "\N:/373Final/VGAdriver/src/memory.v"
+//file0 "\N:/EECS373-BLOONS/VGAdriver/src/driver.v"
+//file1 "\N:/EECS373-BLOONS/VGAdriver/src/memory.v"
 `timescale 100 ps/100 ps
 module driver (
   clk,
   reset,
+  NE1,
+  NWE,
+  ADDR,
+  DATA,
+  NWAIT,
   r,
   g,
   b,
@@ -19,6 +24,11 @@ module driver (
 ;
 input clk;
 input reset;
+input NE1;
+input NWE;
+input [3:0] ADDR;
+input [7:0] DATA;
+output NWAIT;
 output r;
 output g;
 output b;
@@ -1146,6 +1156,10 @@ wire GND;
   IBUF reset_ibuf (
     .O(reset_d),
     .I(reset) 
+);
+  OBUF NWAIT_obuf (
+    .O(NWAIT),
+    .I(VCC) 
 );
   OBUF r_obuf (
     .O(r),

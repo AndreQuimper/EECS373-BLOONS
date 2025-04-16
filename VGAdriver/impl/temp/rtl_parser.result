@@ -1,17 +1,17 @@
 [
  {
-  "InstFile" : "N:/373Final/VGAdriver/src/driver.v",
+  "InstFile" : "N:/EECS373-BLOONS/VGAdriver/src/driver.v",
   "InstLine" : 1,
   "InstName" : "driver",
-  "ModuleFile" : "N:/373Final/VGAdriver/src/driver.v",
+  "ModuleFile" : "N:/EECS373-BLOONS/VGAdriver/src/driver.v",
   "ModuleLine" : 1,
   "ModuleName" : "driver",
   "SubInsts" : [
    {
-    "InstFile" : "N:/373Final/VGAdriver/src/driver.v",
-    "InstLine" : 31,
+    "InstFile" : "N:/EECS373-BLOONS/VGAdriver/src/driver.v",
+    "InstLine" : 32,
     "InstName" : "inst",
-    "ModuleFile" : "N:/373Final/VGAdriver/src/memory.v",
+    "ModuleFile" : "N:/EECS373-BLOONS/VGAdriver/src/memory.v",
     "ModuleLine" : 1,
     "ModuleName" : "coord_list"
    }
