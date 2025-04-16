@@ -13,6 +13,11 @@ module driver(
 //    input x_9,
 //    input x_10,
 //    input x_11,
+	input NE1, ////true for addresses 0x60000000 to 0x63FFFFFF
+	input NWE, //write/read enable
+	input [3:0] ADDR, //address bus
+	input [7:0] DATA, //bi-directional read/write data bus
+	input NWAIT,
 	output r,
 	output g,
 	output b,
@@ -20,11 +25,7 @@ module driver(
 	output reg v_sync
 );
 
-    wire NE1; ////true for addresses 0x60000000 to 0x63FFFFFF
-    wire NWE; //write/read enable
-    wire [3:0] ADDR; //address bus
-    wire [7:0] DATA; //bi-directional read/write data bus
-    wire NWAIT;
+
     wire [$clog2(4):0] count;
     wire [4*3*8-1:0] ram;
 
