@@ -85,6 +85,9 @@ enum TurretMode mode_before_reload;
 uint8_t stepper_active = 0; //0 = stepper pwm is off, 1 = stepper pwm is on
 int current_pitch = PITCH_REST;
 int enter_reload_from_auto = 0;
+
+char RBG_Prios [3] = {'R','B','G'};
+char GBR_Prios [3] = {'G','B','R'};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -177,6 +180,7 @@ void Enter_Auto_Reload(void){
 //INTERRUPT HANDLER
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
     if(GPIO_Pin == GPIO_PIN_13){
+    	reset_prios();
         //USER BUTTON WAS PRESSED
         int speed = 50000; //button is debouncing :)
         for(int i = 0; i < speed; i++){
@@ -345,7 +349,6 @@ int calculate_pitch_change(int y){
     return res;
 }
 
-//TODO: implement how to translate from coordinates to angle of rotation
 void aim_at_coords(int x, int y){
 	//calculate rotation
     if (enter_reload_from_auto) {
@@ -377,37 +380,42 @@ void aim_at_coords(int x, int y){
 	set_pitch(current_pitch);
 }
 
-void automatic_mode_demo(){
+void automatic_mode(){
 	if(change_mode){
 		lcd_display();
 	}
 
 	read_coords();
 	printf("N coords received = %d \n\r", coord_cnt);
-	for(int i = 0; i < coord_cnt; i++){
-		printf("color = %c, x = %d, y = %d \n\r ",coord_list[i].color,coord_list[i].x,coord_list[i].y);
-		switch (current_mode){
-		case AUTO_GBR:
-			if(coord_list[i].color == 'G'){
-				printf("aiming\n\r");
-				aim_at_coords(coord_list[i].x + CAMERA_X_OFFSET,coord_list[i].y);
-				goto done_aiming;
+	for(int prio = 0; prio < sizeof(RBG_Prios); prio++){
+		for(int i = 0; i < coord_cnt; i++){
+			printf("color = %c, x = %d, y = %d \n\r ",coord_list[i].color,coord_list[i].x,coord_list[i].y);
+			switch (current_mode){
+			case AUTO_GBR:
+				if(coord_list[i].color == GBR_Prios[prio]){
+					printf("aiming\n\r");
+					aim_at_coords(coord_list[i].x + CAMERA_X_OFFSET,coord_list[i].y);
+					goto done_aiming;
+				}
+				break;
+			case AUTO_RBG:
+				if(coord_list[i].color == RBG_Prios[prio]){
+					printf("aiming\n\r");
+					aim_at_coords(coord_list[i].x + CAMERA_X_OFFSET,coord_list[i].y);
+					goto done_aiming;
+				}
+				break;
+			default:
+				printf("turret mode error\n\r");
+				return;
 			}
-			break;
-		case AUTO_RBG:
-			if(coord_list[i].color == 'B'){ //TODO: make this red?
-				printf("aiming\n\r");
-				aim_at_coords(coord_list[i].x + CAMERA_X_OFFSET,coord_list[i].y);
-				goto done_aiming;
-			}
-			break;
-		default:
-			printf("turret mode error\n\r");
-			return;
-		}
 
+		}
 	}
 done_aiming:
+	if(coord_cnt == 0){ // no blooners on camera, reset priorities
+		reset_prios();
+	}
 	coord_cnt = 0;
 	memset(coord_list, 0, sizeof(coord_list));
 	HAL_Delay(200);
@@ -422,6 +430,7 @@ void reload(void){
     snprintf(l2, sizeof(l2), "Bands Left: %d", bands);
     LCD_WriteLines("Mode: RELOAD", l2);
     cartridge_state = 0;
+    reset_prios();
     return;
 }
 
@@ -442,6 +451,7 @@ void shoot(void){
 	lcd_display();
 
 	set_cartridge_angle(CARTRIDGE_ANGLE*cartridge_state+CARTRIDGE_OFFSET);
+	rotate_prios();
 	return;
 }
 
@@ -488,6 +498,27 @@ void lcd_display(void){
 		LCD_WriteLines("Mode: RBG", l2);
 	}
 	change_mode = 0;
+}
+
+void reset_prios(void){
+	GBR_Prios[0] = 'G';
+	GBR_Prios[1] = 'B';
+	GBR_Prios[2] = 'R';
+	RBG_Prios[0] = 'R';
+	RBG_Prios[1] = 'B';
+	RBG_Prios[2] = 'G';
+}
+
+void rotate_prios(void){
+	char tmp = GBR_Prios[0];
+	GBR_Prios[0] = GBR_Prios[1];
+	GBR_Prios[1] = GBR_Prios[2];
+	GBR_Prios[2] = tmp;
+
+	tmp = RBG_Prios[0];
+	RBG_Prios[0] = RBG_Prios[1];
+	RBG_Prios[1] = RBG_Prios[2];
+	RBG_Prios[2] = tmp;
 }
 
 /* USER CODE END 0 */
@@ -567,7 +598,7 @@ int main(void)
 		  reload_done_check();
 	  }
 	  else if (current_mode == AUTO_GBR || current_mode == AUTO_RBG){
-		  automatic_mode_demo();
+		  automatic_mode();
 	  }
     /* USER CODE END WHILE */
 
