@@ -1,10 +1,20 @@
 [
  {
-  "InstFile" : "C:/Gowin/Gowin_V1.9.10_x64/IDE/bin/Documents/VGAdriver/src/driver.v",
+  "InstFile" : "N:/EECS373-BLOONS/VGAdriver/src/driver.v",
   "InstLine" : 1,
   "InstName" : "driver",
-  "ModuleFile" : "C:/Gowin/Gowin_V1.9.10_x64/IDE/bin/Documents/VGAdriver/src/driver.v",
+  "ModuleFile" : "N:/EECS373-BLOONS/VGAdriver/src/driver.v",
   "ModuleLine" : 1,
-  "ModuleName" : "driver"
+  "ModuleName" : "driver",
+  "SubInsts" : [
+   {
+    "InstFile" : "N:/EECS373-BLOONS/VGAdriver/src/driver.v",
+    "InstLine" : 32,
+    "InstName" : "inst",
+    "ModuleFile" : "N:/EECS373-BLOONS/VGAdriver/src/memory.v",
+    "ModuleLine" : 1,
+    "ModuleName" : "coord_list"
+   }
+  ]
  }
 ]

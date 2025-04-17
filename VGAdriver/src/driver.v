@@ -1,13 +1,57 @@
 module driver(
 	input clk,
 	input reset,
+//    input x_0,
+//    input x_1,
+//    input x_2,
+//    input x_3,
+//    input x_4,
+//    input x_5,
+//    input x_6,
+//    input x_7,
+//    input x_8,
+//    input x_9,
+//    input x_10,
+//    input x_11,
+	input NE1, ////true for addresses 0x60000000 to 0x63FFFFFF
+	input NWE, //write/read enable
+	input [3:0] ADDR, //address bus
+	input [7:0] DATA, //bi-directional read/write data bus
+	output NWAIT,
 	output r,
 	output g,
 	output b,
 	output reg h_sync,
 	output reg v_sync
 );
-	// Use the PLL to generate a 25MHz clock
+
+
+    wire [$clog2(4):0] count;
+    wire [4*3*8-1:0] ram;
+
+    coord_list inst(
+    .reset(reset),
+    .NE1(NE1),
+    .NWE(NWE), 
+    .ADDR(ADDR),
+    .DATA(DATA), 
+    .NWAIT(NWAIT),
+    .count(count),
+    .ram(ram)
+    );
+
+
+    reg signed [13:0] dx, next_dx;
+    reg signed [13:0] dy, next_dy;
+    reg signed [24:0] dx_sq, next_dx_sq, dy_sq,next_dy_sq;
+
+    reg signed [12:0] x_center;
+    wire signed [12:0]  next_x_center;
+    parameter signed [12:0] y_center = 13'd320;
+    parameter signed [13:0] radius   = 13'd40;
+    parameter signed [13:0] radius_sq   = 13'd1600;
+
+    assign next_x_center = {5'b0, ram[15:8]};
 	
 	parameter [9:0] H_ACTIVE = 10'd639;
 	parameter [9:0] H_FRONT = 10'd15;
@@ -27,7 +71,7 @@ module driver(
 	parameter [1:0] V_PULSE_STATE = 2'd2;
 	parameter [1:0] V_BACK_STATE = 2'd3;
 	reg [1:0] h_state, v_state, next_h_state, next_v_state;
-	reg [9:0] X_Counter, V_Counter, Next_X_Counter, Next_V_Counter;
+	reg signed [12:0] X_Counter, V_Counter, Next_X_Counter, Next_V_Counter;
 	reg next_h_sync, next_v_sync, line_done, next_line_done;
     reg [2:0] color, next_color;
 	always @* begin
@@ -38,13 +82,11 @@ module driver(
 		next_h_sync = h_sync;
 		next_v_sync = v_sync;
         next_line_done   = line_done;
-		
 		if (h_state == H_ACTIVE_STATE) begin
 			Next_X_Counter = (X_Counter == H_ACTIVE) ? 10'd0 : (X_Counter + 10'd1);
 			next_h_sync = 1;
 			next_line_done = 0;
 			next_h_state = (X_Counter == H_ACTIVE) ? H_FRONT_STATE : H_ACTIVE_STATE;
-            next_color = (((X_Counter > 320 && X_Counter < 330) | (X_Counter > 340 && X_Counter < 350)) && ((V_Counter > 235 && V_Counter < 230) | (V_Counter > 245 && V_Counter < 255))) ? 1 : 0;
 		end else if (h_state == H_FRONT_STATE) begin
 			Next_X_Counter = (X_Counter == H_FRONT) ? 10'd0 : (X_Counter + 10'd1);
 			next_h_sync = 1;
@@ -77,6 +119,38 @@ module driver(
 			next_v_state = (line_done) ? ((V_Counter == V_BACK) ? V_ACTIVE_STATE : V_BACK_STATE) : V_BACK_STATE;
 		end
 	end
+
+    always @* begin
+        next_color = 3'd0;
+        if(h_state == H_ACTIVE_STATE && v_state == V_ACTIVE_STATE) begin
+            next_color = ((dx_sq+dy_sq <= radius_sq && dx_sq+dy_sq >= radius_sq-(radius*2)) || dx_sq+dy_sq <= radius) ? 3'd1 : 3'd0;
+        end
+    end
+
+    assign r = color[2];
+    assign g = color[1];
+    assign b = color[0];
+
+    always @* begin
+//        next_x_center[0] = x_0;
+//        next_x_center[1] = x_1;
+//        next_x_center[2] = x_2;
+//        next_x_center[3] = x_3;
+//        next_x_center[4] = x_4;
+//        next_x_center[5] = x_5;
+//        next_x_center[6] = x_6;
+//        next_x_center[7] = x_7;
+//        next_x_center[8] = x_8;
+//        next_x_center[9] = x_9;
+//        next_x_center[10] = x_10;
+//        next_x_center[11] = x_11;
+//        next_x_center[12] = 0;
+        next_dx = (X_Counter > x_center) ? (X_Counter - x_center) : (x_center - X_Counter);
+        next_dy = (V_Counter > y_center) ? (V_Counter - y_center) : (y_center - V_Counter);
+        next_dx_sq = (dx*dx);
+        next_dy_sq = (dy*dy);
+    end
+
 	always @(posedge clk) begin
 		if (~reset) begin
 			X_Counter <= 10'd0;
@@ -87,6 +161,12 @@ module driver(
 			v_sync <= 1;
             line_done <= 0;
             color <= 0;
+            x_center <= 13'd0;
+            dx <= 14'd0;
+            dy <= 14'd0;
+            dx_sq <= 25'd0;
+            dy_sq <= 25'd0;
+//          x_center <= 13'd600;
 		end else begin 
 			X_Counter <= Next_X_Counter;
 			V_Counter <= Next_V_Counter;
@@ -96,12 +176,11 @@ module driver(
 			v_sync <= next_v_sync;
             line_done <= next_line_done;
             color <= next_color;
+            x_center <= next_x_center;
+            dx <= next_dx;
+            dy <= next_dy;
+            dx_sq <= next_dx_sq;
+            dy_sq <= next_dy_sq;
 		end
 	end
-    assign r = (h_state == H_ACTIVE_STATE && v_state == V_ACTIVE_STATE) ? color[0] : 0;
-    assign g = (h_state == H_ACTIVE_STATE && v_state == V_ACTIVE_STATE) ? color[1] : 0;
-    assign b = (h_state == H_ACTIVE_STATE && v_state == V_ACTIVE_STATE) ? color[2] : 0;
-//    assign r = (h_state == H_ACTIVE_STATE && v_state == V_ACTIVE_STATE) ? (V_Counter[3] | X_Counter==256) : 0;
-//    assign g = (h_state == H_ACTIVE_STATE && v_state == V_ACTIVE_STATE) ? (X_Counter[5] ^ X_Counter[6]) | (X_Counter==256) : 0;
-//    assign b = (h_state == H_ACTIVE_STATE && v_state == V_ACTIVE_STATE) ? (X_Counter[4] | X_Counter==256) : 0;
 endmodule

@@ -6,6 +6,7 @@
     <Device name="GW1NZ-1" pn="GW1NZ-LV1QN48C6/I5">gw1nz1-015</Device>
     <FileList>
         <File path="src/driver.v" type="file.verilog" enable="1"/>
+        <File path="src/memory.v" type="file.verilog" enable="1"/>
         <File path="src/driver.cst" type="file.cst" enable="1"/>
     </FileList>
 </Project>

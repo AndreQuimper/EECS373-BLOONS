@@ -1,2 +1,2 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Module name="driver" Register="29" Lut="79" T_Register="29(29)" T_Lut="79(79)"/>
+<Module name="driver" Register="108" Alu="427" Lut="299" T_Register="108(108)" T_Alu="427(427)" T_Lut="299(299)"/>
