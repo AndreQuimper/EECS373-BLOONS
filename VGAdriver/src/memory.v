@@ -1,89 +1,69 @@
 module coord_list(
-    input reset,
     input NE1, ////true for addresses 0x60000000 to 0x63FFFFFF
     input NWE, //write/read enable
-    input [3:0] ADDR, //address bus
+    input [2:0] ADDR, //address bus
     input [7:0] DATA, //bi-directional read/write data bus
-    output NWAIT,
-    output reg [$clog2(4):0] count,
-    output reg [4*3*8-1:0] ram
+    output reg [27:0] ram
 );
 
-    parameter [3:0] CNT_ADDR = 'd0;
-    parameter [$clog2(4):0] POS_ADDR = 'd1;
-    parameter [3:0] COLOR_ADDR = 'd2;
-    parameter [3:0] XCOORD_ADDR = 'd3;
-    parameter [3:0] YCOORD_ADDR = 'd4;
+    parameter [2:0] COLOR_ADDR = 'd1;
+    parameter [2:0] XCOORD_ADDR_LOWER = 'd2;
+    parameter [2:0] XCOORD_ADDR_UPPER = 'd3;
+    parameter [2:0] YCOORD_ADDR_LOWER = 'd4;
+    parameter [2:0] YCOORD_ADDR_UPPER = 'd5;
 
-    reg [$clog2(4):0] current_pos, n_current_pos;
-    reg [4*3*8-1:0] n_ram;
-    reg [$clog2(4):0] n_count;
+    reg [27:0] n_ram;
 
     wire d_latch_enable;
     assign d_latch_enable = ~NE1 & ~NWE;
-    assign NWAIT = 1;
    
-    reg [$clog2(4):0] i;
     always @* begin
-        for(i = 0; i < 4; i = i + 1) begin : bruh
-            n_ram = ram;
-            n_count = count;
-            n_current_pos = current_pos;
-            if(i == current_pos) begin
-                
-                case(ADDR)
-                CNT_ADDR : begin
-                    n_count[$clog2(4):0] = DATA[$clog2(4):0];
-                    n_ram = 0;
-                end
-                POS_ADDR : begin
-                    n_current_pos = DATA[2:0];
-                end
-                COLOR_ADDR : begin
-                    n_ram[i*3*8] = DATA[0];
-                    n_ram[i*3*8 + 1] = DATA[1];
-                    n_ram[i*3*8 + 2] = DATA[2];
-                    n_ram[i*3*8 + 3] = DATA[3];
-                    n_ram[i*3*8 + 4] = DATA[4];
-                    n_ram[i*3*8 + 5] = DATA[5];
-                    n_ram[i*3*8 + 6] = DATA[6];
-                    n_ram[i*3*8 + 7] = DATA[7];
-                    n_ram[i*3*8+7] = 1;
-                end
-                XCOORD_ADDR : begin
-                    n_ram[(i*3*8) + 8] = DATA[0];
-                    n_ram[(i*3*8) + 8 + 1] = DATA[1];
-                    n_ram[(i*3*8) + 8 + 2] = DATA[2];
-                    n_ram[(i*3*8) + 8 + 3] = DATA[3];
-                    n_ram[(i*3*8) + 8 + 4] = DATA[4];
-                    n_ram[(i*3*8) + 8 + 5] = DATA[5];
-                    n_ram[(i*3*8) + 8 + 6] = DATA[6];
-                    n_ram[(i*3*8) + 8 + 7] = DATA[7];
-                end
-                YCOORD_ADDR : begin
-                    n_ram[(i*3*8) + 2*8] = DATA[0];
-                    n_ram[(i*3*8) + 2*8 + 1] = DATA[1];
-                    n_ram[(i*3*8) + 2*8 + 2] = DATA[2];
-                    n_ram[(i*3*8) + 2*8 + 3] = DATA[3];
-                    n_ram[(i*3*8) + 2*8 + 4] = DATA[4];
-                    n_ram[(i*3*8) + 2*8 + 5] = DATA[5];
-                    n_ram[(i*3*8) + 2*8 + 6] = DATA[6];
-                    n_ram[(i*3*8) + 2*8 + 7] = DATA[7];
-                end
-            endcase
-            end
+        n_ram = ram;
+        case(ADDR)
+        XCOORD_ADDR_LOWER : begin
+            n_ram[0] = DATA[0];
+            n_ram[1] = DATA[1];
+            n_ram[2] = DATA[2];
+            n_ram[3] = DATA[3];
+            n_ram[4] = DATA[4];
+            n_ram[5] = DATA[5];
+            n_ram[6] = DATA[6];
+            n_ram[7] = DATA[7];
         end
+        XCOORD_ADDR_UPPER : begin
+            n_ram[8] = DATA[0];
+            n_ram[9] = DATA[1];
+            n_ram[10] = DATA[2];
+            n_ram[11] = DATA[3];
+            n_ram[12] = DATA[4];
+        end
+        YCOORD_ADDR_LOWER : begin
+            n_ram[13+0] = DATA[0];
+            n_ram[13+1] = DATA[1];
+            n_ram[13+2] = DATA[2];
+            n_ram[13+3] = DATA[3];
+            n_ram[13+4] = DATA[4];
+            n_ram[13+5] = DATA[5];
+            n_ram[13+6] = DATA[6];
+            n_ram[13+7] = DATA[7];
+        end
+        YCOORD_ADDR_UPPER : begin
+            n_ram[13+8] = DATA[0];
+            n_ram[13+9] = DATA[1];
+            n_ram[13+10] = DATA[2];
+            n_ram[13+11] = DATA[3];
+            n_ram[13+12] = DATA[4];
+        end
+        COLOR_ADDR : begin
+            n_ram[26] = DATA[0];
+            n_ram[27] = DATA[1];
+        end
+        endcase
     end
 
     always@(posedge d_latch_enable) begin
-        if(reset) begin
-            ram <= 0;
-            current_pos <= 0;
-            count <= 0;
-        end else begin
+       begin
             ram <= n_ram;
-            current_pos <= n_current_pos;
-            count <= n_count;
         end
     end
 endmodule

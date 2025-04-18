@@ -61,11 +61,11 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td class="label">Design File</td>
-<td>N:\EECS373-BLOONS\VGAdriver\impl\gwsynthesis\VGAdriver.vg</td>
+<td>N:\bloons\VGAdriver\impl\gwsynthesis\VGAdriver.vg</td>
 </tr>
 <tr>
 <td class="label">Physical Constraints File</td>
-<td>N:\EECS373-BLOONS\VGAdriver\src\driver.cst</td>
+<td>N:\bloons\VGAdriver\src\driver.cst</td>
 </tr>
 <tr>
 <td class="label">Timing Constraints File</td>
@@ -85,7 +85,7 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td class="label">Created Time</td>
-<td>Wed Apr 16 14:17:16 2025
+<td>Thu Apr 17 22:44:59 2025
 </td>
 </tr>
 <tr>
@@ -157,22 +157,22 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <table class="summary_table">
 <tr>
 <td class="label">Total Power (mW)</td>
-<td>6.980</td>
+<td>8.009</td>
 </tr>
 <tr>
 <td class="label">Quiescent Power (mW)</td>
-<td>6.124</td>
+<td>6.096</td>
 </tr>
 <tr>
 <td class="label">Dynamic Power (mW)</td>
-<td>0.856</td>
+<td>1.913</td>
 </tr>
 </table>
 <h2><a name="Thermal_Info">Thermal Information:</a></h2>
 <table class="summary_table">
 <tr>
 <td class="label">Junction Temperature</td>
-<td>25.283</td>
+<td>25.325</td>
 </tr>
 <tr>
 <td class="label">Theta JA</td>
@@ -180,7 +180,7 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td class="label">Max Allowed Ambient Temperature</td>
-<td>84.717</td>
+<td>84.675</td>
 </tr>
 </table>
 <h2><a name="Supply_Summary">Supply Information:</a></h2>
@@ -195,23 +195,23 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <tr>
 <td>VCC</td>
 <td>1.200</td>
-<td>0.465</td>
+<td>0.809</td>
 <td>3.000</td>
-<td>4.158</td>
+<td>4.571</td>
 </tr>
 <tr>
 <td>VCCX</td>
 <td>3.300</td>
-<td>0.059</td>
+<td>0.186</td>
 <td>0.500</td>
-<td>1.844</td>
+<td>2.262</td>
 </tr>
 <tr>
 <td>VCCIO18</td>
 <td>1.800</td>
-<td>0.058</td>
-<td>0.486</td>
-<td>0.979</td>
+<td>0.183</td>
+<td>0.470</td>
+<td>1.176</td>
 </tr>
 </table>
 <h1><a name="Detail">Power Details</a></h1>
@@ -225,15 +225,15 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td>Logic</td>
-<td>0.485</td>
+<td>0.745</td>
 <td>NA</td>
-<td>6.250</td>
+<td>6.257</td>
 </tr>
 <tr>
 <td>IO</td>
-<td>1.540
-<td>1.171
-<td>9.375
+<td>2.402
+<td>1.237
+<td>13.158
 </tr>
 </table>
 <h2><a name="By_Hierarchy">Power By Hierarchy:</a></h2>
@@ -245,8 +245,12 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td>driver</td>
-<td>0.485</td>
-<td>0.485(0.000)</td>
+<td>0.745</td>
+<td>0.745(0.003)</td>
+<tr>
+<td>driver/inst/</td>
+<td>0.003</td>
+<td>0.003(0.000)</td>
 </table>
 <h2><a name="By_Clock_Domain">Power By Clock Domain:</a></h2>
 <table class="detail_table">
@@ -258,7 +262,17 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <tr>
 <td>clk</td>
 <td>50.000</td>
-<td>0.487</td>
+<td>0.744</td>
+</tr>
+<tr>
+<td>inst/d_latch_enable</td>
+<td>50.000</td>
+<td>0.004</td>
+</tr>
+<tr>
+<td>NO CLOCK DOMAIN</td>
+<td>0.000</td>
+<td>0.000</td>
 </tr>
 </table>
 </div><!-- content -->
