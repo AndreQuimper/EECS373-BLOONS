@@ -60,8 +60,8 @@ def display():
 
 colRanges = {
     'G': ((35, 86, 96), (50, 255, 255)),
-    'B': ((95, 128, 128), (120, 255, 255)),
-    #"red": ((0, 120, 70), (10, 255, 255)),
+    'B': ((95, 196, 196), (120, 255, 255)),
+    'R': ((130, 128, 128), (176, 255, 255))
     #'O': ((5, 100, 100), (25, 255, 255))
 }
 
@@ -76,7 +76,7 @@ def gen():
     while True:
         #CV type splash
         frame = picam2.capture_array()
-        frame = cv2.rotate(frame, cv2.ROTATE_180)
+        #frame = cv2.rotate(frame, cv2.ROTATE_180)
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         frame = imutils.resize(frame, width=600)
         blur = cv2.GaussianBlur(frame, (11,11), 0)

@@ -328,7 +328,7 @@ int calculate_rotation(int x, int* dir){
 		return offset;
 	}
 
-	float degrees_to_step = offset*CAMERA_FOV/(float)CAMERA_MID;
+	float degrees_to_step = 45/(1 + pow(2.7182, (-0.1*(offset-54))));
 	int num_steps = MOTOR_FULL_ROTATION_STEPS*degrees_to_step/360;
 	return num_steps/3;
 }
@@ -351,10 +351,6 @@ int calculate_pitch_change(int y){
 
 void aim_at_coords(int x, int y){
 	//calculate rotation
-    if (enter_reload_from_auto) {
-        reload();
-        enter_reload_from_auto = 0;
-    }
 
     static int locked = 0;
     if (abs(x - CAMERA_MID) <= H_SHOOT_RAD && abs(y - CAMERA_MID) <= V_SHOOT_RAD ) {
@@ -380,6 +376,23 @@ void aim_at_coords(int x, int y){
 	set_pitch(current_pitch);
 }
 
+int color_lock(char c){
+	//if color lock then return
+	static char prev_c = 0;
+	static int c_count = 0;
+
+	if (c != prev_c){
+		c_count++;
+		if (c_count == 5){
+			c_count = 0;
+			prev_c = c;
+			return 1;
+		}
+		return 0;
+	}
+	return 1;
+}
+
 void automatic_mode(){
 	if(change_mode){
 		lcd_display();
@@ -394,6 +407,7 @@ void automatic_mode(){
 			case AUTO_GBR:
 				if(coord_list[i].color == GBR_Prios[prio]){
 					printf("aiming\n\r");
+					if(!color_lock(coord_list[i].color)) goto done_aiming;
 					aim_at_coords(coord_list[i].x + CAMERA_X_OFFSET,coord_list[i].y);
 					goto done_aiming;
 				}
@@ -401,6 +415,7 @@ void automatic_mode(){
 			case AUTO_RBG:
 				if(coord_list[i].color == RBG_Prios[prio]){
 					printf("aiming\n\r");
+					if(!color_lock(coord_list[i].color)) goto done_aiming;
 					aim_at_coords(coord_list[i].x + CAMERA_X_OFFSET,coord_list[i].y);
 					goto done_aiming;
 				}
@@ -413,8 +428,16 @@ void automatic_mode(){
 		}
 	}
 done_aiming:
+	static int zeros_seen = 0;
 	if(coord_cnt == 0){ // no blooners on camera, reset priorities
-		reset_prios();
+		zeros_seen++;
+		if (zeros_seen == 10){
+			reset_prios();
+			zeros_seen = 0;
+		}
+	}
+	else{
+		zeros_seen = 0;
 	}
 	coord_cnt = 0;
 	memset(coord_list, 0, sizeof(coord_list));
