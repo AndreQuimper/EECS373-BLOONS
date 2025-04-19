@@ -6,6 +6,7 @@ import serial
 import random
 import threading
 import copy
+import sys
 
 # Initialize the camera object
 from picamera2 import Picamera2
@@ -123,10 +124,11 @@ def gen():
             threadCv.notify()
             threadCv.release()
         #Yay circles
-        cv2.putText(frame, str(detectedCircs), (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
-        cv2.circle(frame, (int(frame.shape[1]/2), int(frame.shape[0]/2)), 5, (0, 0, 255), -1)
-        cv2.circle(hsv, (int(frame.shape[1]/2), int(frame.shape[0]/2)), 5, (0, 0, 255), -1)
-        cv2.imshow("circles", frame)
+        if len(sys.argv) == 1:
+            cv2.putText(frame, str(detectedCircs), (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
+            cv2.circle(frame, (int(frame.shape[1]/2), int(frame.shape[0]/2)), 5, (0, 0, 255), -1)
+            cv2.circle(hsv, (int(frame.shape[1]/2), int(frame.shape[0]/2)), 5, (0, 0, 255), -1)
+            cv2.imshow("circles", frame)
         #cv2.imshow("HSV", hsv)
         if cv2.waitKey(1) & 0xFF == ord('q'): break
     cv2.destroyAllWindows()
