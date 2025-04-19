@@ -2,11 +2,11 @@
  "Device" : "GW1NZ-1",
  "Files" : [
   {
-   "Path" : "N:/EECS373-BLOONS/VGAdriver/src/driver.v",
+   "Path" : "N:/bloons/VGAdriver/src/driver.v",
    "Type" : "verilog"
   },
   {
-   "Path" : "N:/EECS373-BLOONS/VGAdriver/src/memory.v",
+   "Path" : "N:/bloons/VGAdriver/src/memory.v",
    "Type" : "verilog"
   }
  ],
@@ -14,7 +14,7 @@
 
  ],
  "LoopLimit" : 2000,
- "ResultFile" : "N:/EECS373-BLOONS/VGAdriver/impl/temp/rtl_parser.result",
+ "ResultFile" : "N:/bloons/VGAdriver/impl/temp/rtl_parser.result",
  "Top" : "",
  "VerilogStd" : "verilog_2001",
  "VhdlStd" : "vhdl_93"

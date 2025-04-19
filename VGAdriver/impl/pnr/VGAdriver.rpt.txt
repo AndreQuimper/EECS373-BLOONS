@@ -5,33 +5,33 @@
 1. PnR Messages
 
   <Report Title>: PnR Report
-  <Design File>: N:\EECS373-BLOONS\VGAdriver\impl\gwsynthesis\VGAdriver.vg
-  <Physical Constraints File>: N:\EECS373-BLOONS\VGAdriver\src\driver.cst
+  <Design File>: N:\bloons\VGAdriver\impl\gwsynthesis\VGAdriver.vg
+  <Physical Constraints File>: N:\bloons\VGAdriver\src\driver.cst
   <Timing Constraints File>: ---
   <Tool Version>: V1.9.10 (64-bit)
   <Part Number>: GW1NZ-LV1QN48C6/I5
   <Device>: GW1NZ-1
-  <Created Time>:Wed Apr 16 14:17:19 2025
+  <Created Time>:Thu Apr 17 22:45:01 2025
 
 
 2. PnR Details
 
   Running placement:
-    Placement Phase 0: CPU time = 0h 0m 0.03s, Elapsed time = 0h 0m 0.029s
-    Placement Phase 1: CPU time = 0h 0m 0.07s, Elapsed time = 0h 0m 0.071s
-    Placement Phase 2: CPU time = 0h 0m 0.055s, Elapsed time = 0h 0m 0.056s
-    Placement Phase 3: CPU time = 0h 0m 1s, Elapsed time = 0h 0m 1s
+    Placement Phase 0: CPU time = 0h 0m 0.04s, Elapsed time = 0h 0m 0.04s
+    Placement Phase 1: CPU time = 0h 0m 0.045s, Elapsed time = 0h 0m 0.046s
+    Placement Phase 2: CPU time = 0h 0m 0.091s, Elapsed time = 0h 0m 0.091s
+    Placement Phase 3: CPU time = 0h 0m 0.909s, Elapsed time = 0h 0m 0.909s
     Total Placement: CPU time = 0h 0m 1s, Elapsed time = 0h 0m 1s
  Running routing:
     Routing Phase 0: CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s
-    Routing Phase 1: CPU time = 0h 0m 0.018s, Elapsed time = 0h 0m 0.017s
-    Routing Phase 2: CPU time = 0h 0m 0.587s, Elapsed time = 0h 0m 0.588s
+    Routing Phase 1: CPU time = 0h 0m 0.02s, Elapsed time = 0h 0m 0.02s
+    Routing Phase 2: CPU time = 0h 0m 2s, Elapsed time = 0h 0m 2s
     Routing Phase 3: CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s
-    Total Routing: CPU time = 0h 0m 0.605s, Elapsed time = 0h 0m 0.605s
+    Total Routing: CPU time = 0h 0m 2s, Elapsed time = 0h 0m 2s
  Generate output files:
-    CPU time = 0h 0m 0.865s, Elapsed time = 0h 0m 0.865s
+    CPU time = 0h 0m 0.998s, Elapsed time = 0h 0m 0.999s
 
- Total Time and Memory Usage: CPU time = 0h 0m 3s, Elapsed time = 0h 0m 3s, Peak memory usage = 257MB
+ Total Time and Memory Usage: CPU time = 0h 0m 4s, Elapsed time = 0h 0m 4s, Peak memory usage = 258MB
 
 
 3. Resource Usage Summary
@@ -39,19 +39,19 @@
   ----------------------------------------------------------
   Resources                   | Usage
   ----------------------------------------------------------
-  Logic                       | 762/1152  67%
-    --LUT,ALU,ROM16           | 762(298 LUT, 464 ALU, 0 ROM16)
+  Logic                       | 1064/1152  93%
+    --LUT,ALU,ROM16           | 1064(314 LUT, 750 ALU, 0 ROM16)
     --SSRAM(RAM16)            | 0
-  Register                    | 108/957  12%
+  Register                    | 141/957  15%
     --Logic Register as Latch | 0/864  0%
-    --Logic Register as FF    | 105/864  13%
+    --Logic Register as FF    | 136/864  16%
     --I/O Register as Latch   | 0/93  0%
-    --I/O Register as FF      | 3/93  4%
-  CLS                         | 414/576  72%
-  I/O Port                    | 22
-  I/O Buf                     | 8
-    --Input Buf               | 2
-    --Output Buf              | 6
+    --I/O Register as FF      | 5/93  6%
+  CLS                         | 556/576  97%
+  I/O Port                    | 19
+  I/O Buf                     | 19
+    --Input Buf               | 14
+    --Output Buf              | 5
     --Inout Buf               | 0
   IOLOGIC                     | 0%
   BSRAM                       | 0%
@@ -72,8 +72,8 @@
   -----------------------
   I/O Bank  | Usage       
   -----------------------
-  bank 0   | 5/18(27%)   
-  bank 1   | 17/23(73%)  
+  bank 0   | 4/18(22%)   
+  bank 1   | 15/23(65%)  
   =======================
 
 
@@ -82,8 +82,8 @@
   -------------------------------
   Global Clock  | Usage       
   -------------------------------
-  PRIMARY       | 1/8(13%)
-  LW            | 1/8(13%)
+  PRIMARY       | 2/8(25%)
+  LW            | 0/8(0%)
   GCLK_PIN      | 2/3(67%)
   PLL           | 0/1(0%)
   CLKDIV        | 0/4(0%)
@@ -97,7 +97,7 @@
   Signal         | Global Clock   | Location
   -------------------------------------------
   clk_d          | PRIMARY        |  LEFT RIGHT
-  reset_d        | LW             |  -
+  inst/d_latch_enable| PRIMARY        |  RIGHT
   ===========================================
 
 
@@ -107,13 +107,11 @@
 Port Name  | Diff Pair | Loc./Bank     | Constraint | Dir.  | Site     | IO Type    | Drive | Pull Mode | PCI Clamp | Hysteresis | Open Drain | BankVccio 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------
 clk        |           | 47/0          | Y          | in    | IOT10[A] | LVCMOS18   | NA    | UP        | ON        | NONE       | NA         | 1.8       
-reset      |           | 13/1          | Y          | in    | IOR10[B] | LVCMOS18   | NA    | UP        | ON        | NONE       | NA         | 1.8       
 NE1        |           | 31/1          | Y          | in    | IOR6[A]  | LVCMOS18   | NA    | UP        | ON        | NONE       | NA         | 1.8       
 NWE        |           | 30/1          | Y          | in    | IOR6[C]  | LVCMOS18   | NA    | UP        | ON        | NONE       | NA         | 1.8       
 ADDR[0]    |           | 20/1          | Y          | in    | IOR10[A] | LVCMOS18   | NA    | UP        | ON        | NONE       | NA         | 1.8       
 ADDR[1]    |           | 34/1          | Y          | in    | IOR3[B]  | LVCMOS18   | NA    | UP        | ON        | NONE       | NA         | 1.8       
 ADDR[2]    |           | 35/0          | Y          | in    | IOT17[B] | LVCMOS18   | NA    | UP        | ON        | NONE       | NA         | 1.8       
-ADDR[3]    |           | 42/0          | Y          | in    | IOT14[B] | LVCMOS18   | NA    | UP        | ON        | NONE       | NA         | 1.8       
 DATA[0]    |           | 23/1          | Y          | in    | IOR8[B]  | LVCMOS18   | NA    | UP        | ON        | NONE       | NA         | 1.8       
 DATA[1]    |           | 22/1          | Y          | in    | IOR9[A]  | LVCMOS18   | NA    | UP        | ON        | NONE       | NA         | 1.8       
 DATA[2]    |           | 18/1          | Y          | in    | IOR6[H]  | LVCMOS18   | NA    | UP        | ON        | NONE       | NA         | 1.8       
@@ -122,7 +120,6 @@ DATA[4]    |           | 16/1          | Y          | in    | IOR6[F]  | LVCMOS1
 DATA[5]    |           | 15/1          | Y          | in    | IOR6[D]  | LVCMOS18   | NA    | UP        | ON        | NONE       | NA         | 1.8       
 DATA[6]    |           | 27/1          | Y          | in    | IOR7[A]  | LVCMOS18   | NA    | UP        | ON        | NONE       | NA         | 1.8       
 DATA[7]    |           | 28/1          | Y          | in    | IOR6[I]  | LVCMOS18   | NA    | UP        | ON        | NONE       | NA         | 1.8       
-NWAIT      |           | 19/1          | Y          | out   | IOR6[J]  | LVCMOS18   | 8     | UP        | NA        | NA         | OFF        | 1.8       
 r          |           | 9/1           | Y          | out   | IOR2[A]  | LVCMOS18   | 8     | UP        | NA        | NA         | OFF        | 1.8       
 g          |           | 11/1          | Y          | out   | IOR3[A]  | LVCMOS18   | 8     | UP        | NA        | NA         | OFF        | 1.8       
 b          |           | 10/1          | Y          | out   | IOR2[B]  | LVCMOS18   | 8     | UP        | NA        | NA         | OFF        | 1.8       
@@ -150,7 +147,7 @@ Loc./Bank| Signal   | Dir.  | Site     | IO Type  | Drive | Pull Mode | PCI Clam
 45/0     | -        | in    | IOT12[B] | LVCMOS18 | NA    | UP        | ON        | NONE       | NA         | 1.8  
 44/0     | -        | in    | IOT13[A] | LVCMOS18 | NA    | UP        | ON        | NONE       | NA         | 1.8  
 43/0     | -        | in    | IOT14[A] | LVCMOS18 | NA    | UP        | ON        | NONE       | NA         | 1.8  
-42/0     | ADDR[3]  | in    | IOT14[B] | LVCMOS18 | NA    | UP        | ON        | NONE       | NA         | 1.8  
+42/0     | -        | in    | IOT14[B] | LVCMOS18 | NA    | UP        | ON        | NONE       | NA         | 1.8  
 41/0     | v_sync   | out   | IOT15[B] | LVCMOS18 | 8     | UP        | NA        | NA         | OFF        | 1.8  
 40/0     | h_sync   | out   | IOT16[A] | LVCMOS18 | 8     | UP        | NA        | NA         | OFF        | 1.8  
 39/0     | -        | in    | IOT16[B] | LVCMOS18 | NA    | UP        | ON        | NONE       | NA         | 1.8  
@@ -174,14 +171,14 @@ Loc./Bank| Signal   | Dir.  | Site     | IO Type  | Drive | Pull Mode | PCI Clam
 17/1     | DATA[3]  | in    | IOR6[G]  | LVCMOS18 | NA    | UP        | ON        | NONE       | NA         | 1.8  
 18/1     | DATA[2]  | in    | IOR6[H]  | LVCMOS18 | NA    | UP        | ON        | NONE       | NA         | 1.8  
 28/1     | DATA[7]  | in    | IOR6[I]  | LVCMOS18 | NA    | UP        | ON        | NONE       | NA         | 1.8  
-19/1     | NWAIT    | out   | IOR6[J]  | LVCMOS18 | 8     | UP        | NA        | NA         | OFF        | 1.8  
+19/1     | -        | in    | IOR6[J]  | LVCMOS18 | NA    | UP        | ON        | NONE       | NA         | 1.8  
 27/1     | DATA[6]  | in    | IOR7[A]  | LVCMOS18 | NA    | UP        | ON        | NONE       | NA         | 1.8  
 21/1     | -        | in    | IOR7[B]  | LVCMOS18 | NA    | UP        | ON        | NONE       | NA         | 1.8  
 24/1     | -        | in    | IOR8[A]  | LVCMOS18 | NA    | UP        | ON        | NONE       | NA         | 1.8  
 23/1     | DATA[0]  | in    | IOR8[B]  | LVCMOS18 | NA    | UP        | ON        | NONE       | NA         | 1.8  
 22/1     | DATA[1]  | in    | IOR9[A]  | LVCMOS18 | NA    | UP        | ON        | NONE       | NA         | 1.8  
 20/1     | ADDR[0]  | in    | IOR10[A] | LVCMOS18 | NA    | UP        | ON        | NONE       | NA         | 1.8  
-13/1     | reset    | in    | IOR10[B] | LVCMOS18 | NA    | UP        | ON        | NONE       | NA         | 1.8  
+13/1     | -        | in    | IOR10[B] | LVCMOS18 | NA    | UP        | ON        | NONE       | NA         | 1.8  
 --------------------------------------------------------------------------------------------------------------------------------------
 ======================================================================================================================================
 
