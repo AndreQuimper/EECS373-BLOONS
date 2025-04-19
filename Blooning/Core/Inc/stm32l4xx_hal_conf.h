@@ -60,7 +60,7 @@
 /*#define HAL_LPTIM_MODULE_ENABLED   */
 /*#define HAL_MMC_MODULE_ENABLED   */
 /*#define HAL_NAND_MODULE_ENABLED   */
-/*#define HAL_NOR_MODULE_ENABLED   */
+#define HAL_NOR_MODULE_ENABLED
 /*#define HAL_OPAMP_MODULE_ENABLED   */
 /*#define HAL_OSPI_MODULE_ENABLED   */
 /*#define HAL_OSPI_MODULE_ENABLED   */

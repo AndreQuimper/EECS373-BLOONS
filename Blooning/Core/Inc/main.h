@@ -87,9 +87,9 @@ extern "C" {
 #define D4_GPIO_Port GPIOE
 #define D5_Pin GPIO_PIN_12
 #define D5_GPIO_Port GPIOE
-#define D6_Pin GPIO_PIN_10
+#define D6_Pin GPIO_PIN_11
 #define D6_GPIO_Port GPIOE
-#define D7_Pin GPIO_PIN_7
+#define D7_Pin GPIO_PIN_6
 #define D7_GPIO_Port GPIOE
 
 #define TRIGGER_REST 50
@@ -104,6 +104,14 @@ extern "C" {
 
 #define STEPPER_PRESCALER 4
 #define STEPPER_SPEED 1999
+
+#define VGA_X_BOUND 640
+#define VGA_Y_BOUND 480
+#define VGA_COLOR_ADDR 0x60000001
+#define VGA_X_UPPER_ADDR 0x60000003
+#define VGA_X_LOWER_ADDR 0x60000002
+#define VGA_Y_UPPER_ADDR 0x60000005
+#define VGA_Y_LOWER_ADDR 0x60000004
 /* USER CODE END EM */
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
@@ -126,7 +134,7 @@ void Error_Handler(void);
 #define Stepper_Dir_GPIO_Port GPIOF
 #define Stepper_Step_Pin GPIO_PIN_13
 #define Stepper_Step_GPIO_Port GPIOF
-#define PS2_CS_Pin GPIO_PIN_14
+#define PS2_CS_Pin GPIO_PIN_13
 #define PS2_CS_GPIO_Port GPIOD
 #define servo_pwm_Pin GPIO_PIN_7
 #define servo_pwm_GPIO_Port GPIOB
@@ -148,9 +156,12 @@ void LCD_Clear(void);
 void LCD_WriteString(char *str);
 void LCD_Init(void);
 
+enum color;
+void draw_circle(uint8_t, uint8_t, enum color);
+
 int calculate_rotation(int x, int *dir);
 int calculate_pitch_change(int y);
-void aim_at_coords(int x, int y);
+void aim_at_coords(int x, int y, enum color c);
 void start_pwm_N_steps(uint32_t N);
 
 void Enter_Auto_Reload(void);
