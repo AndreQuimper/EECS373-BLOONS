@@ -1,7 +1,7 @@
-Reading netlist file: "N:\bloons\VGAdriver\impl\gwsynthesis\VGAdriver.vg"
-Parsing netlist file "N:\bloons\VGAdriver\impl\gwsynthesis\VGAdriver.vg" completed
+Reading netlist file: "C:\Users\Andre\OneDrive\Documentos\UMich\Winter2025\eecs373\EECS373-BLOONS\VGAdriver\impl\gwsynthesis\VGAdriver.vg"
+Parsing netlist file "C:\Users\Andre\OneDrive\Documentos\UMich\Winter2025\eecs373\EECS373-BLOONS\VGAdriver\impl\gwsynthesis\VGAdriver.vg" completed
 Processing netlist completed
-Reading constraint file: "N:\bloons\VGAdriver\src\driver.cst"
+Reading constraint file: "C:\Users\Andre\OneDrive\Documentos\UMich\Winter2025\eecs373\EECS373-BLOONS\VGAdriver\src\driver.cst"
 Physical Constraint parsed completed
 Running placement......
 [10%] Placement Phase 0 completed
@@ -20,10 +20,10 @@ Bitstream generation in progress......
 Bitstream generation completed
 Running power analysis......
 [100%] Power analysis completed
-Generate file "N:\bloons\VGAdriver\impl\pnr\VGAdriver.power.html" completed
-Generate file "N:\bloons\VGAdriver\impl\pnr\VGAdriver.pin.html" completed
-Generate file "N:\bloons\VGAdriver\impl\pnr\VGAdriver.rpt.html" completed
-Generate file "N:\bloons\VGAdriver\impl\pnr\VGAdriver.rpt.txt" completed
-Generate file "N:\bloons\VGAdriver\impl\pnr\VGAdriver.tr.html" completed
-Thu Apr 17 22:45:28 2025
+Generate file "C:\Users\Andre\OneDrive\Documentos\UMich\Winter2025\eecs373\EECS373-BLOONS\VGAdriver\impl\pnr\VGAdriver.power.html" completed
+Generate file "C:\Users\Andre\OneDrive\Documentos\UMich\Winter2025\eecs373\EECS373-BLOONS\VGAdriver\impl\pnr\VGAdriver.pin.html" completed
+Generate file "C:\Users\Andre\OneDrive\Documentos\UMich\Winter2025\eecs373\EECS373-BLOONS\VGAdriver\impl\pnr\VGAdriver.rpt.html" completed
+Generate file "C:\Users\Andre\OneDrive\Documentos\UMich\Winter2025\eecs373\EECS373-BLOONS\VGAdriver\impl\pnr\VGAdriver.rpt.txt" completed
+Generate file "C:\Users\Andre\OneDrive\Documentos\UMich\Winter2025\eecs373\EECS373-BLOONS\VGAdriver\impl\pnr\VGAdriver.tr.html" completed
+Tue Apr 22 10:36:22 2025
 

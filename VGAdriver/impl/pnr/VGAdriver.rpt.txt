@@ -5,33 +5,33 @@
 1. PnR Messages
 
   <Report Title>: PnR Report
-  <Design File>: N:\bloons\VGAdriver\impl\gwsynthesis\VGAdriver.vg
-  <Physical Constraints File>: N:\bloons\VGAdriver\src\driver.cst
+  <Design File>: C:\Users\Andre\OneDrive\Documentos\UMich\Winter2025\eecs373\EECS373-BLOONS\VGAdriver\impl\gwsynthesis\VGAdriver.vg
+  <Physical Constraints File>: C:\Users\Andre\OneDrive\Documentos\UMich\Winter2025\eecs373\EECS373-BLOONS\VGAdriver\src\driver.cst
   <Timing Constraints File>: ---
   <Tool Version>: V1.9.10 (64-bit)
   <Part Number>: GW1NZ-LV1QN48C6/I5
   <Device>: GW1NZ-1
-  <Created Time>:Thu Apr 17 22:45:01 2025
+  <Created Time>:Tue Apr 22 10:36:22 2025
 
 
 2. PnR Details
 
   Running placement:
-    Placement Phase 0: CPU time = 0h 0m 0.04s, Elapsed time = 0h 0m 0.04s
-    Placement Phase 1: CPU time = 0h 0m 0.045s, Elapsed time = 0h 0m 0.046s
-    Placement Phase 2: CPU time = 0h 0m 0.091s, Elapsed time = 0h 0m 0.091s
-    Placement Phase 3: CPU time = 0h 0m 0.909s, Elapsed time = 0h 0m 0.909s
-    Total Placement: CPU time = 0h 0m 1s, Elapsed time = 0h 0m 1s
+    Placement Phase 0: CPU time = 0h 0m 0.02s, Elapsed time = 0h 0m 0.02s
+    Placement Phase 1: CPU time = 0h 0m 0.015s, Elapsed time = 0h 0m 0.015s
+    Placement Phase 2: CPU time = 0h 0m 0.016s, Elapsed time = 0h 0m 0.016s
+    Placement Phase 3: CPU time = 0h 0m 0.56s, Elapsed time = 0h 0m 0.56s
+    Total Placement: CPU time = 0h 0m 0.611s, Elapsed time = 0h 0m 0.611s
  Running routing:
-    Routing Phase 0: CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s
-    Routing Phase 1: CPU time = 0h 0m 0.02s, Elapsed time = 0h 0m 0.02s
-    Routing Phase 2: CPU time = 0h 0m 2s, Elapsed time = 0h 0m 2s
+    Routing Phase 0: CPU time = 0h 0m 0.001s, Elapsed time = 0h 0m 0s
+    Routing Phase 1: CPU time = 0h 0m 0.013s, Elapsed time = 0h 0m 0.013s
+    Routing Phase 2: CPU time = 0h 0m 0.064s, Elapsed time = 0h 0m 0.065s
     Routing Phase 3: CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s
-    Total Routing: CPU time = 0h 0m 2s, Elapsed time = 0h 0m 2s
+    Total Routing: CPU time = 0h 0m 0.078s, Elapsed time = 0h 0m 0.078s
  Generate output files:
-    CPU time = 0h 0m 0.998s, Elapsed time = 0h 0m 0.999s
+    CPU time = 0h 0m 0.136s, Elapsed time = 0h 0m 0.136s
 
- Total Time and Memory Usage: CPU time = 0h 0m 4s, Elapsed time = 0h 0m 4s, Peak memory usage = 258MB
+ Total Time and Memory Usage: CPU time = 0h 0m 0.825s, Elapsed time = 0h 0m 0.825s, Peak memory usage = 227MB
 
 
 3. Resource Usage Summary
@@ -39,15 +39,15 @@
   ----------------------------------------------------------
   Resources                   | Usage
   ----------------------------------------------------------
-  Logic                       | 1064/1152  93%
-    --LUT,ALU,ROM16           | 1064(314 LUT, 750 ALU, 0 ROM16)
+  Logic                       | 265/1152  24%
+    --LUT,ALU,ROM16           | 265(185 LUT, 80 ALU, 0 ROM16)
     --SSRAM(RAM16)            | 0
-  Register                    | 141/957  15%
+  Register                    | 112/957  12%
     --Logic Register as Latch | 0/864  0%
-    --Logic Register as FF    | 136/864  16%
+    --Logic Register as FF    | 107/864  13%
     --I/O Register as Latch   | 0/93  0%
     --I/O Register as FF      | 5/93  6%
-  CLS                         | 556/576  97%
+  CLS                         | 173/576  31%
   I/O Port                    | 19
   I/O Buf                     | 19
     --Input Buf               | 14
@@ -96,7 +96,7 @@
   -------------------------------------------
   Signal         | Global Clock   | Location
   -------------------------------------------
-  clk_d          | PRIMARY        |  LEFT RIGHT
+  clk_d          | PRIMARY        |  RIGHT
   inst/d_latch_enable| PRIMARY        |  RIGHT
   ===========================================
 

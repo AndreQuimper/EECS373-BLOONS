@@ -70,9 +70,9 @@ extern "C" {
 #define ON_TARGET 12
 #define CAMERA_FOV 65
 #define CAMERA_MID 128
-#define CAMERA_X_OFFSET 25
-#define H_SHOOT_RAD 10
-#define V_SHOOT_RAD 20
+#define CAMERA_X_OFFSET 30
+#define H_SHOOT_RAD 15
+#define V_SHOOT_RAD 15
 
 #define MOTOR_STEP_SIZE 16 // 16th steps
 #define MOTOR_FULL_ROTATION_STEPS 200 * MOTOR_STEP_SIZE

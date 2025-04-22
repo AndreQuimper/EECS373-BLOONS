@@ -1,17 +1,17 @@
 [
  {
-  "InstFile" : "N:/bloons/VGAdriver/src/driver.v",
+  "InstFile" : "C:/Users/Andre/OneDrive/Documentos/UMich/Winter2025/eecs373/EECS373-BLOONS/VGAdriver/src/driver.v",
   "InstLine" : 1,
   "InstName" : "driver",
-  "ModuleFile" : "N:/bloons/VGAdriver/src/driver.v",
+  "ModuleFile" : "C:/Users/Andre/OneDrive/Documentos/UMich/Winter2025/eecs373/EECS373-BLOONS/VGAdriver/src/driver.v",
   "ModuleLine" : 1,
   "ModuleName" : "driver",
   "SubInsts" : [
    {
-    "InstFile" : "N:/bloons/VGAdriver/src/driver.v",
+    "InstFile" : "C:/Users/Andre/OneDrive/Documentos/UMich/Winter2025/eecs373/EECS373-BLOONS/VGAdriver/src/driver.v",
     "InstLine" : 16,
     "InstName" : "inst",
-    "ModuleFile" : "N:/bloons/VGAdriver/src/memory.v",
+    "ModuleFile" : "C:/Users/Andre/OneDrive/Documentos/UMich/Winter2025/eecs373/EECS373-BLOONS/VGAdriver/src/memory.v",
     "ModuleLine" : 1,
     "ModuleName" : "coord_list"
    }

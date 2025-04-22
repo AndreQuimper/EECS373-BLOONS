@@ -25,7 +25,7 @@ void LCD_SendCommand4(uint8_t command) {
  HAL_Delay(10);
 }
 void LCD_Init(void) {
- HAL_Delay(500);
+ HAL_Delay(100);
  LCD_SendCommand4(0x3);
  LCD_SendCommand4(0x3);
  LCD_SendCommand4(0x3);
@@ -82,6 +82,7 @@ HAL_Delay(2);
 }
 
 void LCD_WriteLines(char* line1, char* line2){
+	//LCD_Init();
 	LCD_Clear();
 	//LCD_SendCommand(0b10000000);
 	LCD_WriteString(line1);

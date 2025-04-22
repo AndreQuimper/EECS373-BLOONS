@@ -63,7 +63,9 @@ module coord_list(
 
     always@(posedge d_latch_enable) begin
        begin
-            ram <= n_ram;
+            ram[12:0] <= n_ram[12:0];
+            ram[25:13] <= n_ram[25:13];
+            ram[27:26] <= n_ram[27:26];
         end
     end
 endmodule

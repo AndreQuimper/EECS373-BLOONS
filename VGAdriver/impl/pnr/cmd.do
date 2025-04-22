@@ -1,8 +1,8 @@
--d N:\bloons\VGAdriver\impl\gwsynthesis\VGAdriver.vg
+-d C:\Users\Andre\OneDrive\Documentos\UMich\Winter2025\eecs373\EECS373-BLOONS\VGAdriver\impl\gwsynthesis\VGAdriver.vg
 -p GW1NZ-1-QFN48-6
 -pn GW1NZ-LV1QN48C6/I5
--cst N:\bloons\VGAdriver\src\driver.cst
--cfg N:\bloons\VGAdriver\impl\pnr\device.cfg
+-cst C:\Users\Andre\OneDrive\Documentos\UMich\Winter2025\eecs373\EECS373-BLOONS\VGAdriver\src\driver.cst
+-cfg C:\Users\Andre\OneDrive\Documentos\UMich\Winter2025\eecs373\EECS373-BLOONS\VGAdriver\impl\pnr\device.cfg
 -bit
 -tr
 -ph

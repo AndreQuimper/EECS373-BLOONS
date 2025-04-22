@@ -21,15 +21,77 @@ module driver(
     .ram(ram)
     );
 
+    reg [25:0] lut_input;
+wire lut_output;
+reg[57:0] w_or;
+assign lut_output = |w_or;
+always @* begin
+	w_or = 'd0;
+	w_or[6'd1] = {13'd40, 13'd0} == lut_input;
+	w_or[6'd2] = {13'd40, 13'd1} == lut_input;
+	w_or[6'd3] = {13'd40, 13'd2} == lut_input;
+	w_or[6'd4] = {13'd40, 13'd3} == lut_input;
+	w_or[6'd5] = {13'd40, 13'd4} == lut_input;
+	w_or[6'd6] = {13'd40, 13'd5} == lut_input;
+	w_or[6'd7] = {13'd40, 13'd6} == lut_input;
+	w_or[6'd8] = {13'd39, 13'd7} == lut_input;
+	w_or[6'd9] = {13'd39, 13'd8} == lut_input;
+	w_or[6'd10] = {13'd39, 13'd9} == lut_input;
+	w_or[6'd11] = {13'd39, 13'd10} == lut_input;
+	w_or[6'd12] = {13'd38, 13'd11} == lut_input;
+	w_or[6'd13] = {13'd38, 13'd12} == lut_input;
+	w_or[6'd14] = {13'd38, 13'd13} == lut_input;
+	w_or[6'd15] = {13'd38, 13'd14} == lut_input;
+	w_or[6'd16] = {13'd37, 13'd15} == lut_input;
+	w_or[6'd17] = {13'd37, 13'd16} == lut_input;
+	w_or[6'd18] = {13'd36, 13'd17} == lut_input;
+	w_or[6'd19] = {13'd36, 13'd18} == lut_input;
+	w_or[6'd20] = {13'd35, 13'd19} == lut_input;
+	w_or[6'd21] = {13'd35, 13'd20} == lut_input;
+	w_or[6'd22] = {13'd34, 13'd21} == lut_input;
+	w_or[6'd23] = {13'd34, 13'd22} == lut_input;
+	w_or[6'd24] = {13'd33, 13'd23} == lut_input;
+	w_or[6'd25] = {13'd32, 13'd24} == lut_input;
+	w_or[6'd26] = {13'd31, 13'd25} == lut_input;
+	w_or[6'd27] = {13'd31, 13'd26} == lut_input;
+	w_or[6'd28] = {13'd30, 13'd27} == lut_input;
+	w_or[6'd29] = {13'd29, 13'd28} == lut_input;
+	w_or[6'd30] = {13'd28, 13'd29} == lut_input;
+	w_or[6'd31] = {13'd27, 13'd30} == lut_input;
+	w_or[6'd32] = {13'd26, 13'd31} == lut_input;
+	w_or[6'd33] = {13'd25, 13'd31} == lut_input;
+	w_or[6'd34] = {13'd24, 13'd32} == lut_input;
+	w_or[6'd35] = {13'd23, 13'd33} == lut_input;
+	w_or[6'd36] = {13'd22, 13'd34} == lut_input;
+	w_or[6'd37] = {13'd21, 13'd34} == lut_input;
+	w_or[6'd38] = {13'd20, 13'd35} == lut_input;
+	w_or[6'd39] = {13'd19, 13'd35} == lut_input;
+	w_or[6'd40] = {13'd18, 13'd36} == lut_input;
+	w_or[6'd41] = {13'd17, 13'd36} == lut_input;
+	w_or[6'd42] = {13'd16, 13'd37} == lut_input;
+	w_or[6'd43] = {13'd15, 13'd37} == lut_input;
+	w_or[6'd44] = {13'd14, 13'd38} == lut_input;
+	w_or[6'd45] = {13'd13, 13'd38} == lut_input;
+	w_or[6'd46] = {13'd12, 13'd38} == lut_input;
+	w_or[6'd47] = {13'd11, 13'd38} == lut_input;
+	w_or[6'd48] = {13'd10, 13'd39} == lut_input;
+	w_or[6'd49] = {13'd9, 13'd39} == lut_input;
+	w_or[6'd50] = {13'd8, 13'd39} == lut_input;
+	w_or[6'd51] = {13'd7, 13'd39} == lut_input;
+	w_or[6'd52] = {13'd6, 13'd40} == lut_input;
+	w_or[6'd53] = {13'd5, 13'd40} == lut_input;
+	w_or[6'd54] = {13'd4, 13'd40} == lut_input;
+	w_or[6'd55] = {13'd3, 13'd40} == lut_input;
+	w_or[6'd56] = {13'd2, 13'd40} == lut_input;
+	w_or[6'd57] = {13'd1, 13'd40} == lut_input;
+	w_or[6'd0] = {13'd0, 13'd40} == lut_input;
+end
 
-    reg signed [13:0] dx, next_dx;
-    reg signed [13:0] dy, next_dy;
-    reg signed [24:0] dx_sq, next_dx_sq, dy_sq,next_dy_sq;
+    reg [13:0] dx, next_dx;
+    reg [13:0] dy, next_dy;
 
-    reg signed [12:0] x_center, y_center;
-    wire signed [12:0]  next_x_center, next_y_center;
-    parameter signed [12:0] radius   = 13'd40;
-    parameter signed [12:0] radius_sq   = 13'd1600;
+    reg [12:0] x_center, y_center;
+    wire [12:0]  next_x_center, next_y_center;
 
     assign next_x_center = ram[12:0];
     assign next_y_center = ram[24:13];
@@ -52,7 +114,7 @@ module driver(
 	parameter [1:0] V_PULSE_STATE = 2'd2;
 	parameter [1:0] V_BACK_STATE = 2'd3;
 	reg [1:0] h_state, v_state, next_h_state, next_v_state;
-	reg signed [12:0] H_Counter, V_Counter, Next_H_Counter, Next_V_Counter;
+	reg [12:0] H_Counter, V_Counter, Next_H_Counter, Next_V_Counter;
 	reg next_h_sync, next_v_sync, line_done, next_line_done;
     reg [2:0] color, next_color;
 	always @* begin
@@ -102,15 +164,17 @@ module driver(
 	end
 
     always @* begin
-        
-        if(h_state == H_ACTIVE_STATE && v_state == V_ACTIVE_STATE 
-        && ((dx_sq+dy_sq <= radius_sq && dx_sq+dy_sq >= radius_sq-{radius, 1'b0}) || dx_sq+dy_sq <= radius)) begin
-            next_color[0] = ram[27:26] == 2'd1;
-            next_color[1] = ram[27:26] == 2'd2;
-            next_color[2] = ram[27:26] == 2'd3;
-        end else begin
-            next_color = 'b0;
+        next_color = 3'b000;
+        lut_input = 26'd0;
+        if(h_state == H_ACTIVE_STATE && v_state == V_ACTIVE_STATE) begin
+            lut_input = {{1'b0, dx[11:0]}, {1'b0, dy[11:0]}};
+            if(lut_output) begin
+                next_color[0] = ram[27:26] == 2'd1;
+                next_color[1] = ram[27:26] == 2'd2 || ram[27:26] == 2'd1;
+                next_color[2] = ram[27:26] == 2'd3;
+            end
         end
+
     end
 
     assign r = color[2];
@@ -120,8 +184,6 @@ module driver(
     always @* begin
         next_dx = (H_Counter > x_center) ? (H_Counter - x_center) : (x_center - H_Counter);
         next_dy = (V_Counter > y_center) ? (V_Counter - y_center) : (y_center - V_Counter);
-        next_dx_sq = (dx*dx);
-        next_dy_sq = (dy*dy);
     end
 
 	always @(posedge clk) begin
@@ -138,8 +200,6 @@ module driver(
             y_center <= next_y_center;
             dx <= next_dx;
             dy <= next_dy;
-            dx_sq <= next_dx_sq;
-            dy_sq <= next_dy_sq;
 		end
 	end
 endmodule
