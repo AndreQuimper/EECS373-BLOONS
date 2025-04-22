@@ -70,14 +70,14 @@ extern "C" {
 #define ON_TARGET 12
 #define CAMERA_FOV 65
 #define CAMERA_MID 128
-#define CAMERA_X_OFFSET 20
-#define H_SHOOT_RAD 15
+#define CAMERA_X_OFFSET 25
+#define H_SHOOT_RAD 10
 #define V_SHOOT_RAD 20
 
 #define MOTOR_STEP_SIZE 16 // 16th steps
 #define MOTOR_FULL_ROTATION_STEPS 200 * MOTOR_STEP_SIZE
 
-#define DPAD_STEPS 50
+#define DPAD_STEPS 30
 
 #define RS_Pin GPIO_PIN_13
 #define RS_GPIO_Port GPIOE
@@ -98,7 +98,7 @@ extern "C" {
 #define CARTRIDGE_START 5
 #define CARTRIDGE_OFFSET 10
 #define MAX_RUBBER_BANDS 7
-#define PITCH_REST 55
+#define PITCH_REST 75
 #define PITCH_MAX 95
 #define PITCH_MIN 40
 
@@ -112,6 +112,7 @@ extern "C" {
 #define VGA_X_LOWER_ADDR 0x60000002
 #define VGA_Y_UPPER_ADDR 0x60000005
 #define VGA_Y_LOWER_ADDR 0x60000004
+#define VGA_CONFIRM_ADDR 0x60000006
 /* USER CODE END EM */
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
@@ -157,11 +158,11 @@ void LCD_WriteString(char *str);
 void LCD_Init(void);
 
 enum color;
-void draw_circle(uint8_t, uint8_t, enum color);
+void draw_circle(uint8_t, uint8_t, char);
 
 int calculate_rotation(int x, int *dir);
 int calculate_pitch_change(int y);
-void aim_at_coords(int x, int y, enum color c);
+void aim_at_coords(int x, int y, char c);
 void start_pwm_N_steps(uint32_t N);
 
 void Enter_Auto_Reload(void);

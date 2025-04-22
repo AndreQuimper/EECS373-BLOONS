@@ -82,7 +82,8 @@ enum color {
 };
 
 int cartridge_state = 0;
-
+int c_count = 0;
+char prev_c = 0;
 
 enum TurretMode current_mode = MANUAL;
 enum TurretMode mode_before_reload;
@@ -184,15 +185,27 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 /*
  * takes x and y between 0 and 255
  */
-void draw_circle(uint8_t x, uint8_t y, enum color c){
+void draw_circle(uint8_t x, uint8_t y, char c){
+	enum color col;
+	if(c == 'R')
+		col = RED;
+	else if (c == 'B')
+		col = BLUE;
+	else
+		col = GREEN;
 	uint16_t scaled_x = ((uint64_t)x*5)>>1;
 	uint16_t scaled_y = ((uint64_t)y*15)>>3;
+	uint8_t x_lower = (uint8_t)(scaled_x & 0xFF);
+	uint8_t x_upper = (uint8_t)(scaled_x >> 8);
+	uint8_t y_lower = (uint8_t)(scaled_y & 0xFF);
+	uint8_t y_upper = (uint8_t)(scaled_y >> 8);
 
-	*((uint8_t *)VGA_COLOR_ADDR) = c;
-	*((uint8_t *)VGA_X_UPPER_ADDR) = (uint8_t)(scaled_x & 0xFF);
-	*((uint8_t *)VGA_X_LOWER_ADDR) = (uint8_t)(scaled_x >> 8);
-	*((uint8_t *)VGA_Y_UPPER_ADDR) = (uint8_t)(scaled_y & 0xFF);
-	*((uint8_t *)VGA_Y_LOWER_ADDR) = (uint8_t)(scaled_y >> 8);
+
+	*((uint8_t *)VGA_COLOR_ADDR) = col;
+	*((uint8_t *)VGA_Y_UPPER_ADDR) = y_upper;
+	*((uint8_t *)VGA_Y_LOWER_ADDR) = y_lower;
+	*((uint8_t *)VGA_X_UPPER_ADDR) = x_upper;
+	*((uint8_t *)VGA_X_LOWER_ADDR) = x_lower;
 }
 
 void manual_control(void){
@@ -243,11 +256,11 @@ void manual_control(void){
 
    }
    if(dpad_left){
-	   HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,STEP_CCW); //set the direction of the step
+	   HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,STEP_CW); //set the direction of the step
 	   start_pwm_N_steps(DPAD_STEPS);
    }
    if(dpad_right){
-	   HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,STEP_CW); //set the direction of the step
+	   HAL_GPIO_WritePin(Stepper_Dir_GPIO_Port,Stepper_Dir_Pin,STEP_CCW); //set the direction of the step
 	   start_pwm_N_steps(DPAD_STEPS);
    }
 
@@ -337,7 +350,7 @@ int calculate_pitch_change(int y){
     return res;
 }
 
-void aim_at_coords(int x, int y, enum color c){
+void aim_at_coords(int x, int y, char c){
 	//calculate rotation
 
 	draw_circle(x, y, c);
@@ -345,7 +358,7 @@ void aim_at_coords(int x, int y, enum color c){
     static int locked = 0;
     if (abs(x - CAMERA_MID) <= H_SHOOT_RAD && abs(y - CAMERA_MID) <= V_SHOOT_RAD ) {
         locked++;
-        if (locked >4) {
+        if (locked >3) {
             shoot();
             locked = 0;
         }
@@ -368,12 +381,8 @@ void aim_at_coords(int x, int y, enum color c){
 
 int color_lock(char c){
 	//if color lock then return
-	static char prev_c = 0;
-	static int c_count = 0;
-
 	if (c != prev_c){
-		c_count++;
-		if (c_count == 5){
+		if (c_count >= 8){
 			c_count = 0;
 			prev_c = c;
 			return 1;
@@ -397,7 +406,7 @@ void automatic_mode(){
 			case AUTO_GBR:
 				if(coord_list[i].color == GBR_Prios[prio]){
 					printf("aiming\n\r");
-					if(!color_lock(coord_list[i].color)) goto done_aiming;
+					if(!color_lock(coord_list[i].color)) continue;
 					aim_at_coords(coord_list[i].x + CAMERA_X_OFFSET,coord_list[i].y, coord_list[i].color);
 					goto done_aiming;
 				}
@@ -405,7 +414,7 @@ void automatic_mode(){
 			case AUTO_RBG:
 				if(coord_list[i].color == RBG_Prios[prio]){
 					printf("aiming\n\r");
-					if(!color_lock(coord_list[i].color)) goto done_aiming;
+					if(!color_lock(coord_list[i].color)) continue;
 					aim_at_coords(coord_list[i].x + CAMERA_X_OFFSET,coord_list[i].y, coord_list[i].color);
 					goto done_aiming;
 				}
@@ -428,7 +437,17 @@ done_aiming:
 	}
 	else{
 		zeros_seen = 0;
+		int need_to_count = 1;
+		for (int i = 0; i < coord_cnt; i++){
+			if (coord_list[i].color == prev_c){
+				need_to_count = 0;
+			}
+		}
+		if (need_to_count){
+			c_count++;
+		}
 	}
+
 	coord_cnt = 0;
 	memset(coord_list, 0, sizeof(coord_list));
 	HAL_Delay(200);
@@ -465,6 +484,8 @@ void shoot(void){
 
 	set_cartridge_angle(CARTRIDGE_ANGLE*cartridge_state+CARTRIDGE_OFFSET);
 	rotate_prios();
+	prev_c = 0;
+	c_count = 0;
 	return;
 }
 
@@ -601,6 +622,7 @@ int main(void)
   set_pitch(PITCH_REST);
   set_trigger_angle(TRIGGER_REST);
   set_cartridge_angle(CARTRIDGE_START);
+
   //set_cartridge_angle(5);
   while (1)
   {
